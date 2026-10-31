@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Digitals.Analyzers.CSharp/Digitals.Analyzers.CSharp.csproj" />
+    <Project Path="src/Digitals.Analyzers/Digitals.Analyzers.csproj" />
+    <Project Path="src/Digitals.Testing.CSharp/Digitals.Testing.CSharp.csproj" />
+    <Project Path="src/Digitals.Testing.Coverage/Digitals.Testing.Coverage.csproj" />
+    <Project Path="src/Digitals.Testing/Digitals.Testing.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Digitals.Analyzers.CSharp.Tests/Digitals.Analyzers.CSharp.Tests.csproj" />
+    <Project Path="tests/Digitals.Testing.CSharp.Tests/Digitals.Testing.CSharp.Tests.csproj" />
+    <Project Path="tests/Digitals.Testing.Coverage.Tests/Digitals.Testing.Coverage.Tests.csproj" />
+  </Folder>
+</Solution>

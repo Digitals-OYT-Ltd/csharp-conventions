@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Sonar rule PARAMETERS for every project that references Digitals.Analyzers.
+	Severities live in Digitals.Analyzers.globalconfig; Sonar reads thresholds
+	only from an AdditionalFile named exactly SonarLint.xml, never from a
+	globalconfig. A rule not listed here keeps Sonar's built-in parameters.
+-->
+<AnalysisInput>
+	<Rules>
+		<!-- S1541: cyclomatic complexity per method. Sonar's default is 10. -->
+		<Rule>
+			<Key>S1541</Key>
+			<Parameters>
+				<Parameter>
+					<Key>maximumFunctionComplexityThreshold</Key>
+					<Value>15</Value>
+				</Parameter>
+			</Parameters>
+		</Rule>
+	</Rules>
+</AnalysisInput>

@@ -1,0 +1,87 @@
+root = true
+
+# ============================================================================
+# MASTER COPY — docs repo: templates/dotnet/.editorconfig
+# Canonical C#/.NET editor behaviour for all repos. Don't edit local copies —
+# edit the master here, re-sync to siblings. Source of truth, not per-repo.
+#
+# ANALYZER SEVERITIES ARE NOT HERE. They ship inside the Digitals.Analyzers
+# package as a global AnalyzerConfig at global_level 100, so a rule change is a
+# PR against that package and reaches every repo on the next version bump:
+#   https://github.com/Digitals-OYT-Ltd/csharp-analyzers#readme
+# Owning standard: docs/standards/coding/csharp/code-style.md#use-digitals-analyzers
+#
+# What must still live in THIS file, because a global config can't hold it:
+#   - editor-core keys (charset, end_of_line, indent_style, ...) — they are only
+#     meaningful inside a [*] section, and no editor reads a globalconfig
+#   - max_line_length — the editor ruler (the RCS0056 gate is in the package)
+#   - path-scoped severity overrides — a global config has no path sections
+#
+# Precedence: anything set here BEATS the package policy. That is the supported
+# way to switch a rule off repo-wide; do it with a comment saying why.
+# ============================================================================
+
+# ============================================================================
+# FILES & ENCODING
+# ============================================================================
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+
+[*.{props,csproj}]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+[*.{cs,vb,cshtml}]
+indent_style = space
+indent_size = 4
+tab_width = 4
+# editor ruler only — the build gate is RCS0056 in the package, same 120
+max_line_length = 120
+
+# ============================================================================
+# SCOPED OVERRIDES — path sections, which a global AnalyzerConfig cannot express.
+# Test-project relaxations are NOT here: the package injects them per project
+# name (a project ending in .Tests) via its own Tests globalconfig.
+# ============================================================================
+
+# Razor page models use _Step{N}_{Name} naming — S101 / IDE1006 flag underscores;
+# handler params mirror query-string casing (UserId, CTNumber, ...) — also IDE1006
+[**/Pages/**.cshtml.cs]
+dotnet_diagnostic.S101.severity = none
+dotnet_diagnostic.IDE1006.severity = none
+
+# test projects — suppress rules that don't fit xUnit / NSubstitute
+
+# EF Core migrations generated — exempt from analyzer rules (don't hand-edit generated code)
+[**/Migrations/**.cs]
+# IDE0130: generated namespace (RootNamespace.Migrations) won't match folder
+dotnet_diagnostic.IDE0130.severity = none
+# CA1861: 'constant array as argument' — EF emits them
+dotnet_diagnostic.CA1861.severity = none
+# CA1850: 'use static HashData' — N/A in generated code
+dotnet_diagnostic.CA1850.severity = none
+# CA1305: 'specify IFormatProvider' — generated string ops
+dotnet_diagnostic.CA1305.severity = none
+# CA1304: 'specify CultureInfo' — generated
+dotnet_diagnostic.CA1304.severity = none
+# CA1311: 'specify culture for ToUpper/ToLower' — generated
+dotnet_diagnostic.CA1311.severity = none
+# CA1309: 'use ordinal StringComparison' — generated
+dotnet_diagnostic.CA1309.severity = none
+# CA1727: 'PascalCase log placeholders' — N/A
+dotnet_diagnostic.CA1727.severity = none
+# CA1862: 'StringComparison for case-insensitive compare' — generated
+dotnet_diagnostic.CA1862.severity = none
+# CA1805: 'redundant default init' — generated
+dotnet_diagnostic.CA1805.severity = none
+# CA2254: 'static logging template' — N/A
+dotnet_diagnostic.CA2254.severity = none
+# S1186: 'empty method' — generated Up()/Down() stubs
+dotnet_diagnostic.S1186.severity = none
+# RCS0056: 'line too long' — generated SQL/HTML literals exceed the limit
+dotnet_diagnostic.RCS0056.severity = none

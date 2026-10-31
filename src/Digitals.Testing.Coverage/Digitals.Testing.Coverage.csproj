@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<!-- Ships inside Digitals.Testing (lib/net10.0/), never packed standalone. -->
+		<IsPackable>false</IsPackable>
+
+		<!-- The consumer compiles generated code against this assembly, so symbols travel with it. -->
+		<DebugType>embedded</DebugType>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The gate and its option provider are internal: nothing outside the package should
+		     construct them, but the tests need to. -->
+		<InternalsVisibleTo Include="Digitals.Testing.Coverage.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!--
+			Floor, not a "latest is better" knob. The generated SelfRegisteredExtensions.cs in a
+			consumer compiles against whatever Microsoft.Testing.Platform xunit.v3 resolves, so this
+			version must never be ahead of the one xunit.v3 depends on. See src/Digitals.Testing/AGENTS.md.
+		-->
+		<PackageReference Include="Microsoft.Testing.Platform" PrivateAssets="all" />
+	</ItemGroup>
+
+</Project>

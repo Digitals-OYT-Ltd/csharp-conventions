@@ -1,0 +1,123 @@
+<Project>
+
+	<!--
+		Banned test packages. Auto-imported into every project that references Digitals.Testing,
+		same filename-matches-PackageId rule as the .props next to it.
+
+		Catches direct PackageReference items only — transitive dependencies are not visible to a
+		consuming project's evaluation.
+
+		Escape hatch, per project, with a comment explaining why:
+		  <DigitalsAllowBannedPackages>Moq</DigitalsAllowBannedPackages>
+	-->
+	<ItemGroup>
+		<!-- VSTest stack. This package forces Microsoft.Testing.Platform, and keeping these around
+		     produces "warning MTP0001: VSTest-specific properties are set but will be ignored",
+		     a coverage engine that never runs, and a coverage gate that silently enforces nothing. -->
+		<DigitalsBannedTestPackage Include="Microsoft.NET.Test.Sdk" Reason="VSTest host — this package runs on Microsoft.Testing.Platform" />
+		<DigitalsBannedTestPackage Include="xunit.runner.visualstudio" Reason="VSTest adapter — xunit.v3 runs natively on Microsoft.Testing.Platform" />
+		<DigitalsBannedTestPackage Include="coverlet.collector" Reason="VSTest-only collector — coverage comes from Microsoft.Testing.Extensions.CodeCoverage" />
+		<DigitalsBannedTestPackage Include="coverlet.msbuild" Reason="VSTest-only collector — coverage comes from Microsoft.Testing.Extensions.CodeCoverage" />
+
+		<!-- Framework and assertion bans, moved from Digitals.Analyzers. -->
+		<DigitalsBannedTestPackage Include="Moq" Reason="use NSubstitute" />
+		<DigitalsBannedTestPackage Include="FluentAssertions" Reason="use xUnit built-in Assert.* — v8+ requires a commercial license and the frozen v7 gets no security backports" />
+		<DigitalsBannedTestPackage Include="xunit" Reason="xUnit v2 — use xunit.v3" />
+		<DigitalsBannedTestPackage Include="xunit.core" Reason="xUnit v2 — use xunit.v3" />
+		<DigitalsBannedTestPackage Include="NUnit" Reason="org test framework is xunit.v3" />
+		<DigitalsBannedTestPackage Include="MSTest" Reason="org test framework is xunit.v3" />
+		<DigitalsBannedTestPackage Include="MSTest.TestFramework" Reason="org test framework is xunit.v3" />
+
+		<!-- v2-lineage xUnit integrations: the v2 IDs still resolve and pull xUnit v2 back into a v3 build. -->
+		<DigitalsBannedTestPackage Include="TngTech.ArchUnitNET.xUnit" Reason="xUnit v2 lineage — use TngTech.ArchUnitNET.xUnitV3" />
+		<DigitalsBannedTestPackage Include="FsCheck.Xunit" Reason="xUnit v2 lineage — use FsCheck.Xunit.v3" />
+		<DigitalsBannedTestPackage Include="Verify.Xunit" Reason="xUnit v2 lineage — use Verify.XunitV3" />
+		<DigitalsBannedTestPackage Include="Microsoft.Playwright.Xunit" Reason="xUnit v2 lineage — use Microsoft.Playwright.Xunit.v3" />
+	</ItemGroup>
+
+	<!--
+		DIGT001 — the Microsoft.Testing.Platform runner has to be selected in global.json.
+
+		Without it, .NET 10's `dotnet test` routes through the VSTest target, and under MTP that is
+		an error from Microsoft.Testing.Platform.MSBuild itself; on an older SDK it silently runs a
+		different host where no coverage is collected and the gate never executes. Neither failure
+		says anything about coverage, so this check names the cause instead.
+
+		Read as text because MSBuild has no JSON reader. A false positive is impossible in practice:
+		the string only appears in global.json as the runner name.
+	-->
+	<PropertyGroup>
+		<_DigitalsGlobalJson>$([MSBuild]::GetPathOfFileAbove('global.json', '$(MSBuildProjectDirectory)'))</_DigitalsGlobalJson>
+		<_DigitalsGlobalJsonText Condition="'$(_DigitalsGlobalJson)' != '' AND Exists('$(_DigitalsGlobalJson)')">$([System.IO.File]::ReadAllText('$(_DigitalsGlobalJson)'))</_DigitalsGlobalJsonText>
+		<_DigitalsMtpSelected>false</_DigitalsMtpSelected>
+		<_DigitalsMtpSelected Condition="$(_DigitalsGlobalJsonText.Contains('Microsoft.Testing.Platform'))">true</_DigitalsMtpSelected>
+	</PropertyGroup>
+
+	<Target Name="DigitalsCheckTestRunner" BeforeTargets="PrepareForBuild" Condition="'$(DigitalsAllowVSTestRunner)' != 'true'">
+		<Error Condition="'$(_DigitalsMtpSelected)' != 'true'" Code="DIGT001"
+			Text="Digitals.Testing requires the Microsoft.Testing.Platform runner, which is selected in global.json at the repository root. Add: &quot;test&quot;: { &quot;runner&quot;: &quot;Microsoft.Testing.Platform&quot; } (needs .NET SDK 10 or later). Without it no coverage is collected and the coverage gate never runs. Staging the migration? Set &lt;DigitalsAllowVSTestRunner&gt;true&lt;/DigitalsAllowVSTestRunner&gt; with a comment explaining why." />
+	</Target>
+
+	<Target Name="DigitalsCheckBannedTestPackages" BeforeTargets="PrepareForBuild" Condition="'@(PackageReference)' != ''">
+		<ItemGroup>
+			<DigitalsBannedTestPackage Remove="$(DigitalsAllowBannedPackages)" />
+			<!-- Intersection via double Exclude: banned minus (banned minus referenced). -->
+			<_DigitalsBannedNotReferenced Include="@(DigitalsBannedTestPackage)" Exclude="@(PackageReference)" />
+			<_DigitalsBannedHit Include="@(DigitalsBannedTestPackage)" Exclude="@(_DigitalsBannedNotReferenced)" />
+		</ItemGroup>
+		<Error Condition="'@(_DigitalsBannedHit)' != ''" Code="DIGT002"
+			Text="Banned test package(s) referenced: @(_DigitalsBannedHit->'%(Identity) (%(Reason))', ' · '). Legitimate exception? Set &lt;DigitalsAllowBannedPackages&gt;@(_DigitalsBannedHit, ';')&lt;/DigitalsAllowBannedPackages&gt; with a comment explaining why." />
+	</Target>
+
+	<!--
+		Digitals.Analyzers bans raw EF Core SQL and one-string command lines in production code
+		(BannedSymbols.Production.txt). Tests run fixed cleanup and schema SQL with table names
+		built at runtime, which the parameterized twins can't express, so the list leaves here.
+		A target, not an evaluation-time Remove: an item condition outside a target can't read
+		custom metadata, and matching on the package path would miss a non-default NuGet root.
+	-->
+	<Target Name="DigitalsDropProductionBannedSymbols" BeforeTargets="CoreCompile">
+		<ItemGroup>
+			<AdditionalFiles Remove="@(AdditionalFiles)" Condition="'%(AdditionalFiles.DigitalsProductionOnly)' == 'true'" />
+		</ItemGroup>
+	</Target>
+
+	<!--
+		Coverage arguments, so `dotnet test` needs no flags and CI needs no bespoke invocation.
+		Built here rather than in the .props because NuGet imports the .props BEFORE the project
+		body and the .targets after it. In the .props these strings would be computed from the
+		package defaults, and a later <DigitalsSkipCoverageGate>true</DigitalsSkipCoverageGate> in
+		the .csproj would change the property without changing the string already derived from it.
+
+		Forward slashes only: MSBuild leaves a literal backslash in this property on macOS and
+		Linux, and the run then fails as "Zero tests ran" with no file-not-found anywhere.
+	-->
+	<PropertyGroup Condition="'$(DigitalsSkipCoverageGate)' != 'true'">
+		<TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --coverage --coverage-output-format cobertura --coverage-settings "$(DigitalsCoverageSettingsFile)" --digitals-coverage-gate --digitals-coverage-min-line $(DigitalsMinLineCoverage) --digitals-coverage-min-branch $(DigitalsMinBranchCoverage)</TestingPlatformCommandLineArguments>
+	</PropertyGroup>
+
+	<!-- The CRAP limit is a separate block so that turning it off leaves the coverage floors alone.
+	     Leaving the option out is what disables the check: the gate treats absent as off, which is a
+	     different answer from a limit of zero. -->
+	<PropertyGroup Condition="'$(DigitalsSkipCoverageGate)' != 'true' AND '$(DigitalsSkipCrapGate)' != 'true' AND '$(DigitalsMaxCrapScore)' != ''">
+		<TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --digitals-coverage-max-crap $(DigitalsMaxCrapScore)</TestingPlatformCommandLineArguments>
+	</PropertyGroup>
+
+	<!-- The complexity cap gets its own block for the same reason: turning one per-method limit off
+	     must leave the other one and the two floors alone. -->
+	<PropertyGroup Condition="'$(DigitalsSkipCoverageGate)' != 'true' AND '$(DigitalsSkipComplexityGate)' != 'true' AND '$(DigitalsMaxCyclomaticComplexity)' != ''">
+		<TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --digitals-coverage-max-complexity $(DigitalsMaxCyclomaticComplexity)</TestingPlatformCommandLineArguments>
+	</PropertyGroup>
+
+	<!-- Same reason these live in the .targets rather than the .props: a .csproj that sets
+	     DigitalsTrxReport is read after the .props and before this file. -->
+	<PropertyGroup Condition="'$(DigitalsTrxReport)' == 'true'">
+		<TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --report-trx</TestingPlatformCommandLineArguments>
+	</PropertyGroup>
+
+	<!-- Coverage still runs with the gate off, so a report is always available to read. -->
+	<PropertyGroup Condition="'$(DigitalsSkipCoverageGate)' == 'true'">
+		<TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --coverage --coverage-output-format cobertura --coverage-settings "$(DigitalsCoverageSettingsFile)"</TestingPlatformCommandLineArguments>
+	</PropertyGroup>
+
+</Project>

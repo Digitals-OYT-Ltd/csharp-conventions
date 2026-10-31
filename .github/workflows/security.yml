@@ -1,0 +1,69 @@
+# Security: once a week, checks every NuGet package that Digitals.Analyzers and Digitals.Testing ship or build
+# with, direct and transitive, for known vulnerabilities. A finding opens an issue, or updates the open one, and
+# the run stays green; only a scan that can't run fails it. Nothing here changes a version: bump the package, or
+# pin a patched transitive one, in Directory.Packages.props.
+#
+# The push builds audit on restore too, but only when something changes. An advisory published between
+# commits would otherwise wait for the next one.
+name: Security
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays, 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  TITLE: Known vulnerabilities in the bundled packages
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v5
+
+      - name: ⚙️ Use .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      # Under TreatWarningsAsErrors an audited restore fails on the very finding this reports, so the restore
+      # skips the audit, and --no-restore stops the list from restoring again with it on.
+      - name: 🔎 NuGet Packages
+        run: |
+          touch "$RUNNER_TEMP/findings.md"
+          dotnet restore --verbosity quiet -p:NuGetAudit=false
+          output=$(dotnet list package --vulnerable --include-transitive --no-restore)
+          if grep -q "has the following vulnerable packages" <<< "$output"; then
+            printf '### NuGet packages\n\n```text\n%s\n```\n\n' "$output" >> "$RUNNER_TEMP/findings.md"
+          fi
+
+      # One open issue at a time, found by its title. A change in the findings rewrites its body and comments,
+      # so watchers hear about it; the same findings again leave it alone.
+      - name: 📣 Open or Update the Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ ! -s "$RUNNER_TEMP/findings.md" ]; then echo "Nothing found." >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          body="$RUNNER_TEMP/body.md"
+          {
+            echo "The weekly security scan found known vulnerabilities in what Digitals.Analyzers or Digitals.Testing ship or build with."
+            echo "Bump the package, or pin a patched version of a transitive one, in Directory.Packages.props."
+            echo "A package either one ships needs a release of it; a build-only package doesn't."
+            echo
+            cat "$RUNNER_TEMP/findings.md"
+          } > "$body"
+          cat "$body" >> "$GITHUB_STEP_SUMMARY"
+          number=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number,title \
+            --jq 'map(select(.title == env.TITLE))[0].number // empty')
+          if [ -z "$number" ]; then
+            gh issue create --title "$TITLE" --body-file "$body"
+          elif [ "$(gh issue view "$number" --json body --jq .body)" != "$(cat "$body")" ]; then
+            gh issue edit "$number" --body-file "$body"
+            gh issue comment "$number" --body "The findings changed: $RUN"
+          fi

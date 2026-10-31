@@ -1,0 +1,96 @@
+<Project>
+
+	<!--
+		Auto-imported into every project that references Digitals.Testing. Because only test
+		projects reference this package, everything here is scoped correctly by construction —
+		there is no project-name convention to keep in step, unlike Digitals.Analyzers, which
+		applies to every project and has to guess which ones are tests.
+	-->
+
+	<PropertyGroup>
+		<!-- xunit.v3 test projects are executables. Set here so a test project does not have to. -->
+		<OutputType Condition="'$(OutputType)' == '' OR '$(OutputType)' == 'Library'">Exe</OutputType>
+		<!-- Generate the Microsoft.Testing.Platform entry point rather than xunit's native runner,
+		     so `dotnet test` and the coverage gate see the same host. -->
+		<TestingPlatformDotnetTestSupport Condition="'$(TestingPlatformDotnetTestSupport)' == ''">true</TestingPlatformDotnetTestSupport>
+		<IsTestProject Condition="'$(IsTestProject)' == ''">true</IsTestProject>
+		<IsPackable Condition="'$(IsPackable)' == ''">false</IsPackable>
+
+		<!-- Coverage floors. Override per project, next to a comment saying which campaign raises
+		     them back. Ratchet: when real coverage climbs, raise these; never lower them. -->
+		<DigitalsMinLineCoverage Condition="'$(DigitalsMinLineCoverage)' == ''">100</DigitalsMinLineCoverage>
+		<DigitalsMinBranchCoverage Condition="'$(DigitalsMinBranchCoverage)' == ''">100</DigitalsMinBranchCoverage>
+		<DigitalsSkipCoverageGate Condition="'$(DigitalsSkipCoverageGate)' == ''">false</DigitalsSkipCoverageGate>
+
+		<!-- CRAP limit, judged per method: complexity squared times the cube of the uncovered
+		     fraction, plus complexity. It catches what the run-wide floors cannot, an untested method
+		     with a dozen branches inside a repo sitting comfortably at 85%. A fully covered method
+		     scores exactly its complexity, so 30 also caps complexity at 30.
+		     Same ratchet as the floors: raise it once on adoption with a comment naming what brings it
+		     back down, then lower it. DigitalsSkipCrapGate turns the check off entirely. -->
+		<DigitalsMaxCrapScore Condition="'$(DigitalsMaxCrapScore)' == ''">30</DigitalsMaxCrapScore>
+		<DigitalsSkipCrapGate Condition="'$(DigitalsSkipCrapGate)' == ''">false</DigitalsSkipCrapGate>
+
+		<!-- Cyclomatic complexity, judged per method from the same reports and independent of
+		     coverage. At 100% coverage the CRAP score IS the complexity, so the CRAP limit alone
+		     caps complexity at 30 there and nothing else; this cap is what makes the second limit
+		     bite, and it does not move when coverage slips.
+		     20, not McCabe's 10, because Microsoft's engine counts roughly two per decision point:
+		     ten sequential if statements measure 20 and five measure 10. So this is McCabe's 10 on
+		     the scale the reports actually use. See src/Digitals.Testing/AGENTS.md before changing it.
+		     Same ratchet as the floors. DigitalsSkipComplexityGate turns the check off entirely. -->
+		<DigitalsMaxCyclomaticComplexity Condition="'$(DigitalsMaxCyclomaticComplexity)' == ''">20</DigitalsMaxCyclomaticComplexity>
+		<DigitalsSkipComplexityGate Condition="'$(DigitalsSkipComplexityGate)' == ''">false</DigitalsSkipComplexityGate>
+
+		<!-- TRX report. On by default for the same reason coverage is: CI should need no bespoke
+		     invocation. Turn it off per project if the file in TestResults/ is in your way. -->
+		<DigitalsTrxReport Condition="'$(DigitalsTrxReport)' == ''">true</DigitalsTrxReport>
+
+		<!-- Coverage settings file. Point this at a repo-local file to override the org policy. -->
+		<DigitalsCoverageSettingsFile Condition="'$(DigitalsCoverageSettingsFile)' == ''">$(MSBuildThisFileDirectory)config/Digitals.Testing.coverage.xml</DigitalsCoverageSettingsFile>
+
+		<!-- Every property above is only a default here. The command line built from them lives in
+		     Digitals.Testing.targets, which NuGet imports AFTER the project body, so overriding any
+		     of them in a .csproj works. Deriving the string here would bake the defaults in before
+		     the project got a say, and a consumer would have to hoist every override into
+		     Directory.Build.props with a project-name condition. -->
+	</PropertyGroup>
+
+	<!--
+		Test severity policy. global_level 300 beats both of Digitals.Analyzers' configs, which is
+		what lets this file relax rules that package sets for production code. Precedence is decided
+		by global_level alone, with no path or project-name scoping involved. 300 rather than 200
+		because a tie is not a win: two configs setting the same key at the same level make Roslyn
+		drop the key, even when both set the identical value.
+	-->
+	<ItemGroup>
+		<GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)config/Digitals.Testing.globalconfig" />
+	</ItemGroup>
+
+	<!--
+		`using Xunit;` in every test file, so no test project has to declare it. Only Xunit: it is
+		the one namespace whose absence is a compile error in every single test file, whereas a
+		global using for a mocking or fake-data library is a house style, not a requirement.
+
+		Works whether or not the project enables ImplicitUsings, and the SDK deduplicates, so a
+		project that already declares the same item builds unchanged. Opt out with
+		<Using Remove="Xunit" />.
+	-->
+	<ItemGroup>
+		<Using Include="Xunit" />
+	</ItemGroup>
+
+	<!--
+		Self-registration of the coverage gate. The Microsoft.Testing.Platform source generator turns
+		this item into a call in the consumer's generated SelfRegisteredExtensions.cs, which is why
+		the gate needs no wiring in the test project. TypeFullName must match the real type exactly;
+		a mismatch fails the consumer's build in generated code.
+	-->
+	<ItemGroup>
+		<TestingPlatformBuilderHook Include="B2E0B4D6-5B8C-4A0E-9D3F-6C1A7E5D2F44">
+			<DisplayName>Digitals coverage gate</DisplayName>
+			<TypeFullName>Digitals.Testing.Coverage.TestingPlatformBuilderHook</TypeFullName>
+		</TestingPlatformBuilderHook>
+	</ItemGroup>
+
+</Project>

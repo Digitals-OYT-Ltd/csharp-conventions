@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="464" viewBox="0 0 960 464" role="img" aria-label="dotnet test on a bookings test project: three DT1 warnings, then the coverage gate failing the run at 80% line coverage against a 100% floor">
+<rect x="0.5" y="0.5" width="959" height="463" rx="10" fill="#ffffff" stroke="#d0d7de"/>
+<path d="M0.5 36 V10.5 a10 10 0 0 1 10 -10 H949.5 a10 10 0 0 1 10 10 V36 Z" fill="#f6f8fa" stroke="#d0d7de"/>
+<circle cx="22" cy="18" r="6" fill="#ff5f57"/>
+<circle cx="42" cy="18" r="6" fill="#febc2e"/>
+<circle cx="62" cy="18" r="6" fill="#28c840"/>
+<text x="480.0" y="23" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#59636e">bash</text>
+<g font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" xml:space="preserve">
+<text x="28" y="64" fill="#1f2328"><tspan fill="#0969da">$</tspan> dotnet test --project Bookings.Tests</text>
+<text x="28" y="108" fill="#1f2328"><tspan fill="#59636e">RoomBookingTests.cs(8,17)</tspan>  <tspan fill="#9a6700" font-weight="600">!</tspan> warning <tspan fill="#8250df" font-weight="600">DT10001</tspan></text>
+<text x="28" y="130" fill="#1f2328">Test 'price_for_two_hours' is not made of PascalCase segments separated by single underscores</text>
+<text x="28" y="152" fill="#1f2328">(aim for Method_Scenario_ExpectedResult)</text>
+<text x="28" y="196" fill="#1f2328"><tspan fill="#59636e">RoomBookingTests.cs(8,17)</tspan>  <tspan fill="#9a6700" font-weight="600">!</tspan> warning <tspan fill="#8250df" font-weight="600">DT10003</tspan></text>
+<text x="28" y="218" fill="#1f2328">Test 'price_for_two_hours' has no [Trait("Category", ...)], so no CI filter selects it</text>
+<text x="28" y="240" fill="#1f2328">and it runs nowhere</text>
+<text x="28" y="284" fill="#1f2328"><tspan fill="#59636e">RoomBookingTests.cs(12,9)</tspan>  <tspan fill="#9a6700" font-weight="600">!</tspan> warning <tspan fill="#8250df" font-weight="600">DT10004</tspan></text>
+<text x="28" y="306" fill="#1f2328">'Thread.Sleep' makes this test wait on the wall clock — advance a FakeTimeProvider, poll for the</text>
+<text x="28" y="328" fill="#1f2328">condition, or pass a TimeProvider to Task.Delay</text>
+<text x="28" y="372" fill="#1f2328"><tspan fill="#59636e">Exit code: 7</tspan></text>
+<text x="28" y="394" fill="#1f2328"><tspan fill="#59636e">  Error output: Unhandled exception. System.InvalidOperationException:</tspan></text>
+<text x="28" y="416" fill="#1f2328"><tspan fill="#cf222e">  Line coverage 80.0% is below the 100.0% floor (4 of 5 covered). Add tests; do not lower the floor.</tspan></text>
+<text x="28" y="438" fill="#1f2328"><tspan fill="#cf222e" font-weight="600">Test run completed with non-success exit code: 7</tspan><tspan fill="#59636e"> (see: https://aka.ms/testingplatform/exitcodes)</tspan></text>
+</g></svg>

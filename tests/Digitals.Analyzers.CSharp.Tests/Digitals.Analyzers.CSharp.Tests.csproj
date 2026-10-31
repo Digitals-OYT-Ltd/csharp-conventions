@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" />
+		<!-- The consumer compiler floor: the tests run the analyzer on the oldest Roslyn it must support. -->
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+		<PackageReference Include="xunit.v3" />
+		<!-- Security pin over a transitive version; see Directory.Packages.props. -->
+		<PackageReference Include="System.Security.Cryptography.Pkcs" />
+	</ItemGroup>
+
+	<!--
+		The vendor analyzers the package ships, restored here so VendorDiagnosticIdsTests can load
+		the exact DLLs a consumer gets and check every ID the globalconfig names against them.
+		ExcludeAssets="all": nothing of theirs runs on this project or reaches its build.
+		GeneratePathProperty: the extracted package folders are handed to the tests below.
+	-->
+	<ItemGroup>
+		<PackageReference Include="SonarAnalyzer.CSharp" ExcludeAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Roslynator.Analyzers" ExcludeAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Roslynator.Formatting.Analyzers" ExcludeAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" ExcludeAssets="all" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" ExcludeAssets="all" GeneratePathProperty="true" />
+	</ItemGroup>
+	<ItemGroup>
+		<AssemblyMetadata Include="VendorAnalyzerPackages" Value="$(PkgSonarAnalyzer_CSharp);$(PkgRoslynator_Analyzers);$(PkgRoslynator_Formatting_Analyzers);$(PkgMicrosoft_VisualStudio_Threading_Analyzers);$(PkgMicrosoft_CodeAnalysis_BannedApiAnalyzers)" />
+		<!-- The policy under test, embedded so the tests read no file at run time. -->
+		<EmbeddedResource Include="..\..\src\Digitals.Analyzers\build\config\Digitals.Analyzers.globalconfig" LogicalName="Digitals.Analyzers.globalconfig" Link="config\Digitals.Analyzers.globalconfig" />
+	</ItemGroup>
+
+	<!--
+		NuGet honours ExcludeAssets="all" for compile, runtime and build assets (the assets file
+		says include: None), but the SDK resolves analyzers straight from each package's file list
+		and ignores it, so all five vendor sets would run on this project. Verified on SDK 10.0.400.
+		Drop them once resolved; the SDK, xunit and Microsoft.CodeAnalysis analyzers stay.
+	-->
+	<Target Name="DigitalsDropExcludedAnalyzers" AfterTargets="ResolveLockFileAnalyzers">
+		<ItemGroup>
+			<_DigitalsExcludedPackage Include="@(PackageReference)" Condition="'%(PackageReference.ExcludeAssets)' == 'all'" />
+		</ItemGroup>
+		<!-- Staged as a property: an @() list inside a property function is not expanded. -->
+		<PropertyGroup>
+			<_DigitalsExcludedPackages>;@(_DigitalsExcludedPackage);</_DigitalsExcludedPackages>
+		</PropertyGroup>
+		<ItemGroup>
+			<Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.NuGetPackageId)' != '' And $(_DigitalsExcludedPackages.IndexOf(';%(Analyzer.NuGetPackageId);', System.StringComparison.OrdinalIgnoreCase)) &gt;= 0" />
+		</ItemGroup>
+	</Target>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Digitals.Analyzers.CSharp\Digitals.Analyzers.CSharp.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,89 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<!--
+			net10.0, not netstandard2.0: the bundled test packages are consumed by this project's own
+			restore, and xunit.v3 has no netstandard2.0 target. The dependency group in the nuspec is
+			net10.0, the oldest .NET the org runs.
+		-->
+		<TargetFramework>net10.0</TargetFramework>
+		<PackageId>Digitals.Testing</PackageId>
+		<!-- Released by tagging testing/v1.2.0, which packs 1.2.0. No <Version>: MinVer reads it from
+		     the tag, and N commits after it packs 1.2.1-alpha.0.N. -->
+		<MinVerTagPrefix>testing/v</MinVerTagPrefix>
+		<!-- Deliberately generic: the bundled packages and rule list change between releases, and
+		     nuget.org shows this text for every past version. -->
+		<Description>Opinionated C# test meta-package for Digitals .NET repositories. Bundles the org test stack together with the shared test severity policy, the banned test packages, the code coverage configuration and a coverage gate that fails the run below the org floor. Reference this one package from a test project to get a consistent test setup across every repository; see the README for what is in force in this version.</Description>
+		<PackageTags>testing;xunit;xunit-v3;nsubstitute;bogus;code-coverage;coverage;mtp;microsoft-testing-platform;analyzers;test-conventions;dotnet</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<!-- This project compiles nothing of its own; the shipped assemblies come from the two
+		     sibling projects and are packed explicitly below. -->
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<!-- Referencing xunit.v3 makes the SDK treat this as a test project and turn packing off.
+		     Both have to be forced back or `dotnet pack` reports success and produces nothing. -->
+		<IsPackable>true</IsPackable>
+		<IsTestProject>false</IsTestProject>
+		<!-- xunit.v3's targets hard-error unless the referencing project is an executable, even
+		     though nothing here is ever run. -->
+		<OutputType>Exe</OutputType>
+		<GenerateProgramFile>false</GenerateProgramFile>
+		<TestingPlatformInjectEntryPoint>false</TestingPlatformInjectEntryPoint>
+
+		<!-- NOT marked DevelopmentDependency, unlike Digitals.Analyzers: this package delivers
+		     runtime assemblies (xunit, NSubstitute, the coverage gate) rather than build-time-only
+		     assets, and a shared test-utilities library that packs itself needs them to flow. -->
+	</PropertyGroup>
+
+	<!--
+		PrivateAssets="none" is load-bearing: NuGet's default for a dependency is
+		exclude="build,analyzers", which would strip the build assets and the self-registering
+		platform extensions these packages ship, and the package would bring almost nothing.
+	-->
+	<ItemGroup>
+		<PackageReference Include="xunit.v3" PrivateAssets="none" />
+		<PackageReference Include="NSubstitute" PrivateAssets="none" />
+		<PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" PrivateAssets="none" />
+		<PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" PrivateAssets="none" />
+		<!-- TRX report, so a CI step has a test-results file to publish. Every other MTP reporter
+		     is a per-repo choice; this one is not, because without it PublishTestResults and its
+		     GitHub equivalents have nothing to read at all. -->
+		<PackageReference Include="Microsoft.Testing.Extensions.TrxReport" PrivateAssets="none" />
+		<!-- Declared explicitly so the coverage gate assembly in lib/ resolves its reference without
+		     relying on xunit.v3's transitive graph. Must match the version xunit.v3 resolves. -->
+		<PackageReference Include="Microsoft.Testing.Platform" PrivateAssets="none" />
+	</ItemGroup>
+
+	<!-- Build-time only (versioning); PrivateAssets="all" keeps it out of the package's dependencies. -->
+	<ItemGroup>
+		<PackageReference Include="MinVer" PrivateAssets="all" />
+	</ItemGroup>
+
+	<!-- build/Digitals.Testing.props is auto-imported by NuGet (name must match PackageId). -->
+	<ItemGroup>
+		<None Include="build\**" Pack="true" PackagePath="build\" />
+		<None Include="README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<!-- Test-code rules (DT#####): built with this project, DLL packed into analyzers/dotnet/cs/
+	     so the compiler loads it in consuming test projects. -->
+	<ItemGroup>
+		<ProjectReference Include="..\Digitals.Testing.CSharp\Digitals.Testing.CSharp.csproj"
+			ReferenceOutputAssembly="false" PrivateAssets="all" />
+		<None Include="..\Digitals.Testing.CSharp\bin\$(Configuration)\netstandard2.0\Digitals.Testing.CSharp.dll"
+			Pack="true" PackagePath="analyzers/dotnet/cs/" Visible="false" />
+	</ItemGroup>
+
+	<!-- Coverage gate: a real assembly in lib/, because the generated SelfRegisteredExtensions.cs
+	     in the consumer compiles against its TestingPlatformBuilderHook type.
+
+	     Compiled as netstandard2.0 but packed under lib/net10.0/ to match the nuspec's only
+	     dependency group. A lib folder with no matching dependency group is NU5128, and with
+	     TreatWarningsAsErrors in CI that fails the pack. -->
+	<ItemGroup>
+		<ProjectReference Include="..\Digitals.Testing.Coverage\Digitals.Testing.Coverage.csproj"
+			ReferenceOutputAssembly="false" PrivateAssets="all" />
+		<None Include="..\Digitals.Testing.Coverage\bin\$(Configuration)\netstandard2.0\Digitals.Testing.Coverage.dll"
+			Pack="true" PackagePath="lib/net10.0/" Visible="false" />
+	</ItemGroup>
+
+</Project>

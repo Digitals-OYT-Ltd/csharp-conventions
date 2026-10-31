@@ -1,0 +1,41 @@
+# Dependabot: a weekly PR for each new NuGet package and GitHub Action. A green PR that bumps a package
+# Digitals.Analyzers or Digitals.Testing ships is not mergeable on that alone: the bump rules in each
+# package's AGENTS.md need checks no test runs, and the package's next release is at least a minor.
+# .github/workflows/security.yml looks for known vulnerabilities in the versions already pinned.
+#
+# No dotnet-sdk entry: global.json stays on 10.0.100, whose Roslyn 5.0.0 is the compiler floor the
+# Microsoft.CodeAnalysis.CSharp pin matches.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # The floor on every consumer's compiler, never a version to keep current (AGENTS.md).
+      - dependency-name: Microsoft.CodeAnalysis.CSharp
+      - dependency-name: Microsoft.CodeAnalysis.CSharp.Workspaces
+    groups:
+      # xunit.v3 and the Microsoft.Testing extensions have to resolve one Microsoft.Testing.Platform.
+      test-stack:
+        patterns: [xunit.v3*, Microsoft.Testing.*]
+      # Both Roslynator packages release together on one version.
+      roslynator:
+        patterns: [Roslynator.*]
+      # Build-time only, so nothing to release: one PR for the minor and patch bumps.
+      build:
+        patterns:
+          - Digitals.Analyzers
+          - Microsoft.CodeAnalysis.CSharp.Analyzer.Testing
+          - MinVer
+          - System.Security.Cryptography.Pkcs
+        update-types: [minor, patch]
+      # Every other shipped package gets a PR of its own, since each needs its own review.
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        update-types: [minor, patch]

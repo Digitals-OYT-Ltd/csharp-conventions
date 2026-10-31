@@ -1,0 +1,14 @@
+<Project>
+
+	<Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+	<!--
+		Dogfood the shipped test policy. Consumers get this file from the Digitals.Testing package's
+		build/ folder; here every test project imports it straight from source, so a relaxation these
+		projects need is added where every consumer gets it rather than in the repo's .editorconfig.
+	-->
+	<ItemGroup>
+		<GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)../src/Digitals.Testing/build/config/Digitals.Testing.globalconfig" />
+	</ItemGroup>
+
+</Project>

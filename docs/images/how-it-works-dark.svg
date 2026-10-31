@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="316" viewBox="0 0 960 316" role="img" aria-label="How it works: Directory.Build.props brings Digitals.Analyzers to every project and each test project adds Digitals.Testing; dotnet build reports both packages' findings and dotnet test runs the coverage gate">
+  <rect x="0.5" y="0.5" width="959" height="315" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <text x="26" y="26" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="start">YOUR REPO</text>
+  <text x="318" y="26" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="start">THE PACKAGES</text>
+  <text x="674" y="26" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="11" font-weight="600" text-anchor="start">EVERY BUILD AND TEST RUN</text>
+  <rect x="24" y="40" width="236" height="116" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <text x="40" y="66" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" text-anchor="start">Directory.Build.props</text>
+  <text x="40" y="90" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">Every project</text>
+  <text x="40" y="109" fill="#9198a1" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12.5" font-weight="400" text-anchor="start">Digitals.Analyzers</text>
+  <rect x="24" y="176" width="236" height="116" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <text x="40" y="202" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" text-anchor="start">Each test project</text>
+  <text x="40" y="226" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">Gets both packages</text>
+  <text x="40" y="245" fill="#9198a1" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12.5" font-weight="400" text-anchor="start">Digitals.Testing</text>
+  <rect x="316" y="40" width="300" height="116" rx="10" fill="#1b1530" stroke="#4b3a75"/>
+  <text x="332" y="66" fill="#d2a8ff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" text-anchor="start">Digitals.Analyzers</text>
+  <text x="332" y="90" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">Sonar, Roslynator, VS Threading, BannedApi</text>
+  <text x="332" y="109" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">Severity policy, banned APIs and packages</text>
+  <text x="332" y="128" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">DT0#### rules and DIGB build checks</text>
+  <rect x="316" y="176" width="300" height="116" rx="10" fill="#0b1f38" stroke="#1f4b7f"/>
+  <text x="332" y="202" fill="#79c0ff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" text-anchor="start">Digitals.Testing</text>
+  <text x="332" y="226" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">xunit.v3, NSubstitute, FakeTimeProvider</text>
+  <text x="332" y="245" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">Test policy, banned test packages</text>
+  <text x="332" y="264" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">DT1#### rules and the coverage gate</text>
+  <rect x="672" y="40" width="264" height="116" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <text x="688" y="66" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" text-anchor="start">dotnet build</text>
+  <text x="688" y="90" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">File, line, message and rule ID</text>
+  <text x="688" y="109" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">Errors under TreatWarningsAsErrors</text>
+  <text x="688" y="128" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">DIGB and DIGT setup checks</text>
+  <rect x="672" y="176" width="264" height="116" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <text x="688" y="202" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" text-anchor="start">dotnet test</text>
+  <text x="688" y="226" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">Line and branch coverage floors</text>
+  <text x="688" y="245" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">CRAP and complexity limits</text>
+  <text x="688" y="264" fill="#9198a1" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" text-anchor="start">Fails the run below any of them</text>
+  <line x1="260" y1="98" x2="310" y2="98" stroke="#9198a1" stroke-width="1.5"/><path d="M308,93 L316,98 L308,103 Z" fill="#9198a1"/>
+  <line x1="260" y1="234" x2="310" y2="234" stroke="#9198a1" stroke-width="1.5"/><path d="M308,229 L316,234 L308,239 Z" fill="#9198a1"/>
+  <line x1="616" y1="98" x2="666" y2="98" stroke="#ab7df8" stroke-width="1.5"/><path d="M664,93 L672,98 L664,103 Z" fill="#ab7df8"/>
+  <path d="M616 206 H644 V128 H666" fill="none" stroke="#4493f8" stroke-width="1.5"/><path d="M664,123 L672,128 L664,133 Z" fill="#4493f8"/>
+  <line x1="616" y1="252" x2="666" y2="252" stroke="#4493f8" stroke-width="1.5"/><path d="M664,247 L672,252 L664,257 Z" fill="#4493f8"/>
+</svg>

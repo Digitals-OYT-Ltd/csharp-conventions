@@ -1,0 +1,40 @@
+# AGENTS.md: Digitals.Analyzers
+
+The production half: the vendor analyzers, the severity policy, banned APIs and packages, the `DT0####` rules and the `DIGB` build checks. Production code only. A consuming repo references this package from `Directory.Build.props`, so it reaches every project and can only guess which ones are tests. Anything about tests belongs in `Digitals.Testing`.
+
+## Layout
+
+- `build/Digitals.Analyzers.props` wires in the globalconfig and both banned-symbol lists. `BannedSymbols.Production.txt` carries `DigitalsProductionOnly="true"` metadata, which Digitals.Testing's `DigitalsDropProductionBannedSymbols` target removes by; rename the metadata in both packages or neither. `build/Digitals.Analyzers.targets` holds the `DIGB001`-`DIGB004` checks, the SonarLint.xml hand-over, the EF migrations exemption and the opt-in SARIF log.
+- `build/config/Digitals.Analyzers.globalconfig` is the severity policy (`global_level 100`). `BannedSymbols.txt` beside it is the RS0030 list for every project, `BannedSymbols.Production.txt` the one test projects don't get. A doc ID in either file that matches no symbol is ignored without a warning, so prove a new entry fires in a scratch consumer; generate the ID with Roslyn's `GetDocumentationCommentId()` rather than writing it by hand. `SonarLint.xml` holds the Sonar thresholds, the only place Sonar reads parameters from.
+- The `DT0####` rules are `../Digitals.Analyzers.CSharp`, packed into `analyzers/dotnet/cs/`.
+- `../../tests/Digitals.Analyzers.CSharp.Tests` tests the rules. `GlobalConfigTests` checks the globalconfig's shape (`is_global`, `global_level`, no section header, known severities, no duplicate ID). `VendorDiagnosticIdsTests` loads the vendor DLLs restored at the `Directory.Packages.props` versions and fails on any configured `S`, `RCS`, `VSTHRD`, `RS` or `DT` ID that nothing declares. SDK-owned IDs (`CA`, `IDE`, `SYSLIB`, `CS`) are outside it; `IDE0001`, for one, is editor-only.
+
+## Adding a rule
+
+1. Take the next `DT0####` ID. Read both `AnalyzerReleases.*.md` ledgers first, and the `### Removed Rules` rows: `DT00005` is retired.
+2. Decide between a banned symbol and a custom rule. RS0030 matches references to symbols in a referenced assembly; it can't see a type declared in the consumer's own source, and it can't express a construct like `dynamic`. Clock bans stay in `BannedSymbols.txt` and temporal-type bans in the analyzer, so one `#pragma` can never disable both.
+3. Write the analyzer in `../Digitals.Analyzers.CSharp`. Prefer syntax and symbol rules; dataflow is expensive to get right and Sonar already does it.
+4. Add the `AnalyzerReleases.Unshipped.md` row, and the severity to the globalconfig (`warning`; repos escalate with `TreatWarningsAsErrors`).
+5. Test the reporting cases, the clean cases and the `#pragma` escape. Add its section to `docs/rules/analyzers.md` in the shape the others have, with the message captured from a real build.
+
+## Verifying a change
+
+Analyzer tests don't cover the config files or the packaging, which only take effect through a real build. Pack, `rm -rf ~/.nuget/packages/digitals.analyzers`, and build a scratch consumer against the nupkg. Use a canary that is only a warning because of the globalconfig, such as `IDE1006` (needs `EnforceCodeStyleInBuild`) or `SYSLIB1045`. If those fire, the policy is applied; the analyzers' own default severities prove nothing.
+
+## Gotchas
+
+- Bumping a vendor analyzer: check the `Microsoft.CodeAnalysis` assembly that `analyzers/dotnet/cs/*.dll` references, since it is a floor on the consumer's compiler like our own pin, and must stay at or below `5.0.0.0` (SDK 10.0.100). `BannedApiAnalyzers` 5.6.0 references 4.12.0.0 with no fallback folder, VS Threading 18.12.1 references 4.11.0.0, Sonar 1.3.1.0, and Roslynator multi-targets (`roslyn3.8`, `4.7`, `5.0`). A reference above the consumer's compiler drops that vendor's rules with only a `CS9057` warning.
+- A vendor bump can delete a configured rule. Roslynator 4.15 to 5.0 went from 299 to 271 descriptors, and the configured `RCS0014` was the casualty (successor: `RCS0061` plus `roslynator_blank_line_between_switch_sections`). `VendorDiagnosticIdsTests` catches this; don't loosen it. It doesn't catch a rule the vendor switches off by default: Sonar 10.35 turned off `S1264`, `S2692`, `S3249`, `S3885` and `S6670`, and only the two set in the globalconfig still fire. Diff each analyzer's `SupportedDiagnostics` (ID, default severity, enabled) between the old and new version on every vendor bump.
+- Sonar reads only the first `AdditionalFiles` item named `SonarLint.xml` and ignores the rest without a warning. Package `.props` items land ahead of the project's, and `Directory.Build.targets` is imported after the package's `.targets`, so neither an evaluation-time item nor an item condition lets a consumer override the org file. `DigitalsYieldSonarLintXml` removes the org file in a target before `CoreCompile` instead. A consumer's file replaces the org thresholds wholesale.
+- A wrong parameter key in `SonarLint.xml` is ignored as silently as an unknown ID, and the rule keeps its default. Keys aren't guessable: S134 is `maximumNestingLevel`, not `maximumNestingDepth`. Confirm a new key by setting it low in a scratch project and checking the threshold in the message changes. Sonar ignores an S138 `max` of 1 or less for methods, so probe at 2 or more.
+- Not every Sonar ID in the SonarQube docs is in the NuGet analyzer. `S1448` doesn't exist in SonarAnalyzer.CSharp 10.33, and `S1479` there checks single-statement cases, not case count. Enumerate `SupportedDiagnostics` by reflection before adding a Sonar ID.
+- A naming rule's `severity` inside a `dotnet_naming_rule.*` block is IDE-only. Build enforcement needs `dotnet_diagnostic.IDE1006.severity` as well, which the globalconfig sets.
+- `ExcludeAssets="all"` on a `PackageReference` doesn't keep that package's analyzers out: NuGet records `include: None`, but the SDK resolves analyzers from the package's file list regardless (SDK 10.0.400). `DigitalsDropExcludedAnalyzers` in the test csproj removes the five vendor sets after `ResolveLockFileAnalyzers`. It stages the package list into a property first, because MSBuild expands `$()` property functions before `@()` item lists, so an `@()` inside `[System.String]::new(...)` is literal text.
+- `TreatWarningsAsErrors` doesn't escalate a `<Warning>` task in the packaged `.targets`; only the compiler and NuGet read it. A `DIGB` warning meant to fail the build goes in `MSBuildWarningsAsErrors`, as `DIGB004` does. Without that, a consumer with `TreatWarningsAsErrors` built green with `DIGB004` printed.
+- Restore-time properties (`NuGetAudit*`, `RestoreSources`, ...) can't be set from this package, only checked. On a clean restore the package's `build/` files aren't imported yet, so a value set there would apply on some builds and not others.
+- Keep `../Digitals.Analyzers.CSharp` on `netstandard2.0`, single-target. Analyzers run in the compiler process, so the consumer's TFM is irrelevant. The only multi-targeting that exists for analyzers is the Roslyn version (`analyzers/dotnet/roslyn4.x/cs/`), not needed until a rule needs a newer Roslyn API.
+
+## Domain notes
+
+- `RS0030` is a `warning`; the escape hatch is `#pragma warning disable RS0030 // reason`. `DIGB001` (banned package), `DIGB002` (`Nullable` not `enable`) and `DIGB003` (`TreatWarningsAsErrors` not `true`) are build errors whatever the repo sets; `DIGB002` and `DIGB003` have per-project `DigitalsAllow*` opt-outs. `DIGB004` (NuGet audit weakened) is a warning escalated through `MSBuildWarningsAsErrors`, opt-out `DigitalsAllowWeakNuGetAudit`. All four exist because without `Nullable` and `TreatWarningsAsErrors` the whole severity policy is advisory.
+- `DT00013`-`DT00018` keep each method at one abstraction level. None of them reads a framework, project or namespace name, so they work in any C# codebase; what counts as orchestration is in `OrchestrationMethods.cs` and tunable through `digitals_*` keys.

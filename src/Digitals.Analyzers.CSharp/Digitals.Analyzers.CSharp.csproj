@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<!-- Analyzers run inside the compiler process, so the consumer's TFM is irrelevant and this
+		     stays netstandard2.0, single-target. Set here because Directory.Build.props sets no TFM. -->
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<!-- Ships inside Digitals.Analyzers (analyzers/dotnet/cs/), never packed standalone. -->
+		<IsPackable>false</IsPackable>
+
+		<!--
+			Debuggability of the shipped analyzer. A .snupkg symbol package is no use here:
+			nuget.org's symbol server only indexes lib/ and runtimes/, never analyzers/.
+			Embedding the PDB in the DLL is the only way symbols reach consumers.
+		-->
+		<DebugType>embedded</DebugType>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<!-- Deterministic build paths in CI. GitHub Actions sets CI=true automatically. -->
+		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Conservative Roslyn pin: consumers need a compiler at least this new (SDK 8 ships 4.8). -->
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+	</ItemGroup>
+
+	<!--
+		AnalyzerReleases.Shipped.md / Unshipped.md (RS2008 release tracking) are not listed here:
+		Microsoft.CodeAnalysis.Analyzers adds both as AdditionalFiles itself, and a second item
+		makes dotnet format report "Duplicate source file".
+	-->
+
+</Project>

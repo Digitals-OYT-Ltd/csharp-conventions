@@ -1,0 +1,178 @@
+<Project>
+
+	<!--
+		Banned NuGet packages. Auto-imported into every project that references
+		Digitals.Analyzers, same filename-matches-PackageId rule as the .props next to it.
+
+		Production libraries only. Test frameworks, assertion and mocking libraries are
+		banned by Digitals.Testing (DIGT002), which is referenced only by test projects
+		and so can name them without guessing which projects are tests.
+
+		Catches direct PackageReference items only — transitive dependencies are
+		not visible to a consuming project's evaluation.
+
+		Escape hatch, per project, with a comment explaining why:
+		  <DigitalsAllowBannedPackages>Newtonsoft.Json</DigitalsAllowBannedPackages>
+	-->
+	<ItemGroup>
+		<DigitalsBannedPackage Include="Newtonsoft.Json" Reason="use System.Text.Json" />
+		<DigitalsBannedPackage Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Reason="use System.Text.Json (the default MVC serializer)" />
+		<DigitalsBannedPackage Include="AutoMapper" Reason="write explicit mapping code — v15+ requires a commercial license, and reflection mapping hides field drift until runtime" />
+		<DigitalsBannedPackage Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Reason="write explicit mapping code — see AutoMapper" />
+		<DigitalsBannedPackage Include="EntityFramework" Reason="EF6 classic — use Microsoft.EntityFrameworkCore" />
+		<DigitalsBannedPackage Include="System.Data.SqlClient" Reason="legacy unmaintained driver — use Microsoft.Data.SqlClient" />
+		<DigitalsBannedPackage Include="Microsoft.EntityFrameworkCore.Proxies" Reason="no lazy loading — load explicitly with Include, or project to DTOs" />
+	</ItemGroup>
+
+	<!--
+		Sonar rule parameters (thresholds). Sonar reads only the FIRST AdditionalFile
+		named SonarLint.xml and ignores the rest without a warning, and the org file
+		would land ahead of the project's own. So the org file steps aside right
+		before compile whenever the project brings a SonarLint.xml of its own, from
+		the csproj, Directory.Build.props/targets or anywhere else. A target, not an
+		item condition, because Directory.Build.targets is imported after this file.
+		A repo that ships its own file replaces the org thresholds wholesale, not rule
+		by rule: copy the rules it still wants from config/SonarLint.xml.
+	-->
+	<ItemGroup>
+		<AdditionalFiles Include="$(MSBuildThisFileDirectory)config\SonarLint.xml" DigitalsOrgSonarLint="true" />
+	</ItemGroup>
+	<Target Name="DigitalsYieldSonarLintXml" BeforeTargets="CoreCompile">
+		<ItemGroup>
+			<_DigitalsOwnSonarLint Include="@(AdditionalFiles)" Condition="'%(Filename)%(Extension)' == 'SonarLint.xml' AND '%(AdditionalFiles.DigitalsOrgSonarLint)' != 'true'" />
+			<AdditionalFiles Remove="@(AdditionalFiles)" Condition="'%(AdditionalFiles.DigitalsOrgSonarLint)' == 'true' AND '@(_DigitalsOwnSonarLint)' != ''" />
+		</ItemGroup>
+	</Target>
+
+	<!--
+		EF Core migrations. They are not marked as generated code (only the .Designer.cs
+		and model snapshot are), so a large data-seeding migration trips S104 like any
+		hand-written file. A globalconfig cannot hold a path glob, only absolute paths,
+		so this writes one per build naming every Compile item under a Migrations/
+		folder (EF's default output directory). A repo that moved its migrations with
+		'dotnet ef migrations add -o' exempts them in its own .editorconfig instead.
+	-->
+	<Target Name="DigitalsExemptEfMigrations" BeforeTargets="CoreCompile" Condition="'$(Language)' == 'C#'">
+		<PropertyGroup>
+			<_DigitalsMigrationsConfig>$(IntermediateOutputPath)Digitals.Migrations.globalconfig</_DigitalsMigrationsConfig>
+		</PropertyGroup>
+		<ItemGroup>
+			<_DigitalsMigrationFile Include="@(Compile->'%(FullPath)'->Replace('\', '/'))" />
+			<_DigitalsMigrationFile Remove="@(_DigitalsMigrationFile)" Condition="!$([System.String]::Copy('%(Identity)').Contains('/Migrations/'))" />
+			<_DigitalsMigrationSection Include="@(_DigitalsMigrationFile->'[%(Identity)]%0Adotnet_diagnostic.S104.severity = none')" />
+		</ItemGroup>
+		<WriteLinesToFile Condition="'@(_DigitalsMigrationFile)' != ''" File="$(_DigitalsMigrationsConfig)"
+			Lines="is_global = true;global_level = 100;@(_DigitalsMigrationSection)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+		<ItemGroup Condition="'@(_DigitalsMigrationFile)' != ''">
+			<EditorConfigFiles Include="$(_DigitalsMigrationsConfig)" />
+			<FileWrites Include="$(_DigitalsMigrationsConfig)" />
+		</ItemGroup>
+	</Target>
+
+	<!--
+		Opt-in SARIF log per project, for a coding agent or a script. dotnet build prints
+		warnings and errors only; suggestion-level diagnostics reach nothing but the IDE
+		and a SARIF log, where they appear as "level": "note".
+		  dotnet build -p:DigitalsSarifDir=artifacts/sarif
+		A relative path resolves against the directory dotnet build runs from. Setting
+		ErrorLog yourself still wins.
+		An up-to-date build skips CoreCompile and so writes no log. When the log is
+		missing, the stamp below is touched as an extra compile input, which forces the
+		one recompile that writes it. A log that exists is current: the last compile
+		wrote it, and nothing has changed since.
+	-->
+	<PropertyGroup Condition="'$(DigitalsSarifDir)' != '' AND '$(ErrorLog)' == ''">
+		<_DigitalsSarifDir>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::Combine('$(MSBuildStartupDirectory)', '$(DigitalsSarifDir)'))))</_DigitalsSarifDir>
+		<_DigitalsSarifName>$(MSBuildProjectName)</_DigitalsSarifName>
+		<_DigitalsSarifName Condition="'$(TargetFramework)' != ''">$(MSBuildProjectName).$(TargetFramework)</_DigitalsSarifName>
+		<_DigitalsSarifFile>$(_DigitalsSarifDir)$(_DigitalsSarifName).sarif</_DigitalsSarifFile>
+		<ErrorLog>$(_DigitalsSarifFile),version=2.1</ErrorLog>
+	</PropertyGroup>
+	<Target Name="DigitalsPrepareSarifLog" BeforeTargets="CoreCompile" Condition="'$(_DigitalsSarifFile)' != ''">
+		<PropertyGroup>
+			<_DigitalsSarifStamp>$(IntermediateOutputPath)Digitals.sarif.stamp</_DigitalsSarifStamp>
+		</PropertyGroup>
+		<MakeDir Directories="$(_DigitalsSarifDir)" />
+		<Touch Files="$(_DigitalsSarifStamp)" AlwaysCreate="true" Condition="!Exists('$(_DigitalsSarifFile)')" />
+		<ItemGroup Condition="Exists('$(_DigitalsSarifStamp)')">
+			<CustomAdditionalCompileInputs Include="$(_DigitalsSarifStamp)" />
+			<FileWrites Include="$(_DigitalsSarifStamp)" />
+		</ItemGroup>
+	</Target>
+
+	<!--
+		Compiler strictness gate. The whole severity policy is opt-in without these
+		two MSBuild properties: no <Nullable>enable</Nullable> means zero null safety,
+		no <TreatWarningsAsErrors>true</TreatWarningsAsErrors> means every 'warning'
+		in the globalconfig stays advisory. A comment cannot enforce them; this can.
+		Errors (not warnings) on purpose: a missing TreatWarningsAsErrors would
+		demote a warning-grade check to noise.
+
+		Escape hatches, per project, with a comment explaining why:
+		  <DigitalsAllowNullableDisabled>true</DigitalsAllowNullableDisabled>
+		  <DigitalsAllowWarningsNotAsErrors>true</DigitalsAllowWarningsNotAsErrors>
+	-->
+	<Target Name="DigitalsCheckCompilerStrictness" BeforeTargets="PrepareForBuild" Condition="'$(Language)' == 'C#'">
+		<!-- ErrorAndContinue: report both violations in one build instead of one per fix attempt. -->
+		<Error Condition="'$(Nullable)' != 'enable' AND '$(DigitalsAllowNullableDisabled)' != 'true'" Code="DIGB002" ContinueOnError="ErrorAndContinue"
+			Text="&lt;Nullable&gt; is '$(Nullable)' — the org policy requires 'enable' (Directory.Build.props). Migrating a legacy project? Set &lt;DigitalsAllowNullableDisabled&gt;true&lt;/DigitalsAllowNullableDisabled&gt; with a comment explaining why." />
+		<Error Condition="'$(TreatWarningsAsErrors)' != 'true' AND '$(DigitalsAllowWarningsNotAsErrors)' != 'true'" Code="DIGB003"
+			Text="&lt;TreatWarningsAsErrors&gt; is '$(TreatWarningsAsErrors)' — the org policy requires 'true' (Directory.Build.props), or the packaged analyzer severities never gate a build. Migrating a legacy project? Set &lt;DigitalsAllowWarningsNotAsErrors&gt;true&lt;/DigitalsAllowWarningsNotAsErrors&gt; with a comment explaining why." />
+	</Target>
+
+	<!--
+		NuGet vulnerability audit gate. Restore audits every package against the
+		advisory database and raises NU1901-NU1904, which TreatWarningsAsErrors turns
+		into a failed build. That only holds while the audit stays at full strength:
+		enabled, covering transitive packages, reporting from 'low' up, and with none
+		of the NU190x codes silenced. This checks the values restore actually used.
+
+		Only a check, not a default. Restore evaluates the project before this file
+		is imported on a clean machine, so a NuGetAuditMode set here would apply on
+		some builds and not others. NuGetAuditMode defaults to 'all' only for
+		net10.0 and later; older targets have to set it themselves.
+
+		A warning that fails the build under TreatWarningsAsErrors. MSBuild does not
+		read that property for its own <Warning> task, only the compiler and NuGet
+		do, so DIGB004 is added to MSBuildWarningsAsErrors to get the same effect.
+		One advisory you have to live with: <NuGetAuditSuppress Include="<advisory URL>" />.
+		Anything broader, per project, with a comment explaining why:
+		  <DigitalsAllowWeakNuGetAudit>true</DigitalsAllowWeakNuGetAudit>
+	-->
+	<PropertyGroup Condition="'$(TreatWarningsAsErrors)' == 'true'">
+		<MSBuildWarningsAsErrors>$(MSBuildWarningsAsErrors);DIGB004</MSBuildWarningsAsErrors>
+	</PropertyGroup>
+	<Target Name="DigitalsCheckNuGetAudit" BeforeTargets="PrepareForBuild" Condition="'$(DigitalsAllowWeakNuGetAudit)' != 'true'">
+		<ItemGroup>
+			<_DigitalsAuditCode Include="NU1901;NU1902;NU1903;NU1904" />
+			<!-- Unescape: MSBuild escapes the ';' a property function returns, which would keep the whole list as one item. -->
+			<_DigitalsSilencedCode Include="$([MSBuild]::Unescape($(NoWarn.Replace(',', ';'))));$([MSBuild]::Unescape($(WarningsNotAsErrors.Replace(',', ';'))))" />
+			<!-- Intersection via double Exclude, as in DigitalsCheckBannedPackages. -->
+			<_DigitalsAuditCodeKept Include="@(_DigitalsAuditCode)" Exclude="@(_DigitalsSilencedCode)" />
+			<_DigitalsAuditCodeSilenced Include="@(_DigitalsAuditCode)" Exclude="@(_DigitalsAuditCodeKept)" />
+		</ItemGroup>
+		<PropertyGroup>
+			<_DigitalsAuditHint>Legitimate exception? Suppress the one advisory with &lt;NuGetAuditSuppress Include="&lt;advisory URL&gt;" /&gt;, or set &lt;DigitalsAllowWeakNuGetAudit&gt;true&lt;/DigitalsAllowWeakNuGetAudit&gt; with a comment explaining why.</_DigitalsAuditHint>
+		</PropertyGroup>
+		<Warning Condition="'$(NuGetAudit)' != 'true'" Code="DIGB004"
+			Text="&lt;NuGetAudit&gt; is '$(NuGetAudit)', so restore checks no package for known vulnerabilities. The org policy requires 'true'. $(_DigitalsAuditHint)" />
+		<Warning Condition="'$(NuGetAudit)' == 'true' AND '$(NuGetAuditMode)' != 'all'" Code="DIGB004"
+			Text="&lt;NuGetAuditMode&gt; is '$(NuGetAuditMode)', so vulnerable transitive packages go unreported. The org policy requires 'all' (the SDK default only from net10.0): set &lt;NuGetAuditMode&gt;all&lt;/NuGetAuditMode&gt; in Directory.Build.props. $(_DigitalsAuditHint)" />
+		<Warning Condition="'$(NuGetAudit)' == 'true' AND '$(NuGetAuditLevel)' != 'low'" Code="DIGB004"
+			Text="&lt;NuGetAuditLevel&gt; is '$(NuGetAuditLevel)', so advisories below it go unreported. The org policy requires 'low'. $(_DigitalsAuditHint)" />
+		<Warning Condition="'@(_DigitalsAuditCodeSilenced)' != ''" Code="DIGB004"
+			Text="Vulnerability warning(s) @(_DigitalsAuditCodeSilenced, ', ') are in NoWarn or WarningsNotAsErrors, so a vulnerable package no longer fails the build. $(_DigitalsAuditHint)" />
+	</Target>
+
+	<Target Name="DigitalsCheckBannedPackages" BeforeTargets="PrepareForBuild" Condition="'@(PackageReference)' != ''">
+		<ItemGroup>
+			<DigitalsBannedPackage Remove="$(DigitalsAllowBannedPackages)" />
+			<!-- Intersection via double Exclude: banned minus (banned minus referenced). -->
+			<_DigitalsBannedNotReferenced Include="@(DigitalsBannedPackage)" Exclude="@(PackageReference)" />
+			<_DigitalsBannedHit Include="@(DigitalsBannedPackage)" Exclude="@(_DigitalsBannedNotReferenced)" />
+		</ItemGroup>
+		<Error Condition="'@(_DigitalsBannedHit)' != ''" Code="DIGB001"
+			Text="Banned package(s) referenced: @(_DigitalsBannedHit->'%(Identity) — %(Reason)', ' · '). Legitimate exception? Set &lt;DigitalsAllowBannedPackages&gt;@(_DigitalsBannedHit, ';')&lt;/DigitalsAllowBannedPackages&gt; with a comment explaining why." />
+	</Target>
+
+</Project>

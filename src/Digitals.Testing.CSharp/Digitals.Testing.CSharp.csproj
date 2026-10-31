@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<!-- Ships inside Digitals.Testing (analyzers/dotnet/cs/), never packed standalone. -->
+		<IsPackable>false</IsPackable>
+
+		<!--
+			Debuggability of the shipped analyzer. A .snupkg symbol package is no use here:
+			nuget.org's symbol server only indexes lib/ and runtimes/, never analyzers/.
+			Embedding the PDB in the DLL is the only way symbols reach consumers.
+		-->
+		<DebugType>embedded</DebugType>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<!-- Deterministic build paths in CI. GitHub Actions sets CI=true automatically. -->
+		<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Conservative Roslyn pin: consumers need a compiler at least this new (SDK 8 ships 4.8). -->
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+	</ItemGroup>
+
+	<!--
+		RS2008 release tracking: new rules land in AnalyzerReleases.Unshipped.md and move to
+		AnalyzerReleases.Shipped.md on release. Neither file is listed as an AdditionalFile here on
+		purpose: Microsoft.CodeAnalysis.Analyzers.targets already includes both, and adding them
+		again makes `dotnet format` report "Duplicate source file ... in project" on every run.
+		The None removals are still needed, because the SDK's default glob picks up every .md.
+	-->
+	<ItemGroup>
+		<None Remove="AnalyzerReleases.Shipped.md" />
+		<None Remove="AnalyzerReleases.Unshipped.md" />
+	</ItemGroup>
+
+</Project>

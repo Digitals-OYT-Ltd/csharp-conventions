@@ -1,0 +1,50 @@
+<Project>
+
+	<!--
+		Central package management: every version lives here, and a PackageReference in a csproj
+		names the package only. A package both shipped and tested (the vendor analyzers, xunit.v3)
+		has one line, so the package and its tests always run the same build.
+	-->
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	</PropertyGroup>
+
+	<!-- Shipped by Digitals.Analyzers as its dependencies. Bump rules are in src/Digitals.Analyzers/AGENTS.md. -->
+	<ItemGroup>
+		<PackageVersion Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" />
+		<PackageVersion Include="Roslynator.Analyzers" Version="5.0.1" />
+		<PackageVersion Include="Roslynator.Formatting.Analyzers" Version="5.0.1" />
+		<PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.12.1" />
+		<PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
+	</ItemGroup>
+
+	<!--
+		Shipped by Digitals.Testing as its dependencies. They move together: xunit.v3 4.x, CodeCoverage
+		and TrxReport all have to resolve the same Microsoft.Testing.Platform (src/Digitals.Testing/AGENTS.md).
+	-->
+	<ItemGroup>
+		<PackageVersion Include="xunit.v3" Version="4.0.2" />
+		<PackageVersion Include="NSubstitute" Version="6.2.0" />
+		<PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
+		<PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
+		<PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.5.1" />
+		<PackageVersion Include="Microsoft.Testing.Platform" Version="2.5.1" />
+	</ItemGroup>
+
+	<!--
+		Build-time only. Microsoft.CodeAnalysis.CSharp is the FLOOR on the consumer's compiler: both
+		analyzers are built against it and their tests run on it. 5.0.0 is what SDK 10.0.100 ships.
+	-->
+	<ItemGroup>
+		<PackageVersion Include="Digitals.Analyzers" Version="0.11.0" />
+		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
+		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" Version="1.1.4" />
+		<PackageVersion Include="MinVer" Version="8.0.0" />
+		<!-- Pin over the 9.0.6 that Analyzer.Testing pulls in through NuGet.Packaging 7.0.3:
+		     GHSA-846f-f764-76mx and GHSA-2fmv-rv2c-59x7 fail restore (NU1902/NU1903). Drop the pin
+		     once Analyzer.Testing depends on a patched NuGet.Packaging. -->
+		<PackageVersion Include="System.Security.Cryptography.Pkcs" Version="9.0.22" />
+	</ItemGroup>
+
+</Project>

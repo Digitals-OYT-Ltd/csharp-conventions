@@ -1,0 +1,19 @@
+<Project>
+
+	<!--
+		Auto-imported into every project that references Digitals.Analyzers.
+		Wires in the org severity/style policy and the banned-symbol list.
+		A repo-local .editorconfig always overrides the globalconfig, so
+		individual repos can still opt out of single rules.
+
+		Test projects get their own severity policy from Digitals.Testing, at a
+		higher global_level, and it relaxes what this one sets for production code.
+	-->
+	<ItemGroup>
+		<GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)config\Digitals.Analyzers.globalconfig" />
+		<AdditionalFiles Include="$(MSBuildThisFileDirectory)config\BannedSymbols.txt" />
+		<!-- Raw SQL and one-string command lines. Digitals.Testing removes it by this metadata. -->
+		<AdditionalFiles Include="$(MSBuildThisFileDirectory)config\BannedSymbols.Production.txt" DigitalsProductionOnly="true" />
+	</ItemGroup>
+
+</Project>

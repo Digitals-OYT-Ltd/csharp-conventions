@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<PackageId>Digitals.Analyzers</PackageId>
+		<!-- Released by tagging analyzers/v1.2.0, which packs 1.2.0. No <Version>: MinVer reads it from
+		     the tag, and N commits after it packs 1.2.1-alpha.0.N. -->
+		<MinVerTagPrefix>analyzers/v</MinVerTagPrefix>
+		<!-- Deliberately generic: the analyzer set and rule list change between
+		     releases, and nuget.org shows this text for every past version. -->
+		<Description>Opinionated C# analyzer meta-package for Digitals .NET repositories. Bundles a curated set of third-party Roslyn analyzers together with the shared severity policy, banned APIs, banned packages and custom org rules. Reference this one package to get consistent static analysis across every repository; see the README for the rules in force in this version.</Description>
+		<PackageTags>analyzers;roslyn;roslyn-analyzers;code-analysis;static-analysis;code-quality;codestyle;editorconfig;globalconfig;banned-api;dotnet</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+
+		<!-- Pure dependency shell: no compiled output in the package. -->
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<!-- NU5128: "package has dependencies but no lib/" — intentional for a meta-package. -->
+		<NoWarn>$(NoWarn);NU5128</NoWarn>
+		<!-- Consumers get PrivateAssets="all" by default, so the analyzers do not leak into their own consumers. -->
+		<DevelopmentDependency>true</DevelopmentDependency>
+	</PropertyGroup>
+
+	<!--
+		PrivateAssets="none" is load-bearing: NuGet's default for a dependency is
+		exclude="build,analyzers", which would strip the analyzers from flowing to
+		consumers and make this package bring nothing.
+		Versions live in Directory.Packages.props, shared with the test project.
+	-->
+	<ItemGroup>
+		<PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="none" />
+		<PackageReference Include="Roslynator.Analyzers" PrivateAssets="none" />
+		<PackageReference Include="Roslynator.Formatting.Analyzers" PrivateAssets="none" />
+		<PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" PrivateAssets="none" />
+		<PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="none" />
+	</ItemGroup>
+
+	<!-- Build-time only (versioning); PrivateAssets="all" keeps it out of the package's dependencies. -->
+	<ItemGroup>
+		<PackageReference Include="MinVer" PrivateAssets="all" />
+	</ItemGroup>
+
+	<!-- build/Digitals.Analyzers.props is auto-imported by NuGet (name must match PackageId). -->
+	<ItemGroup>
+		<None Include="build\**" Pack="true" PackagePath="build\" />
+		<None Include="README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<!-- Custom org rules (DT0####): built with this project, DLL packed into
+	     analyzers/dotnet/cs/ so the compiler loads it in consumers. -->
+	<ItemGroup>
+		<ProjectReference Include="..\Digitals.Analyzers.CSharp\Digitals.Analyzers.CSharp.csproj"
+			ReferenceOutputAssembly="false" PrivateAssets="all" />
+		<None Include="..\Digitals.Analyzers.CSharp\bin\$(Configuration)\netstandard2.0\Digitals.Analyzers.CSharp.dll"
+			Pack="true" PackagePath="analyzers/dotnet/cs/" Visible="false" />
+	</ItemGroup>
+
+</Project>

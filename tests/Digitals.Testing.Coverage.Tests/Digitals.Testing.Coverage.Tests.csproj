@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!--
+			Deliberately not a reference to Digitals.Testing itself. The meta-package injects the
+			coverage gate into whatever project consumes it, so using it here would run the gate
+			over the gate's own tests during the build that produces the gate. Consumer behaviour
+			is proved by the scratch consumer in src/Digitals.Testing/AGENTS.md instead.
+		-->
+		<PackageReference Include="xunit.v3" />
+		<PackageReference Include="NSubstitute" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Digitals.Testing.Coverage\Digitals.Testing.Coverage.csproj" />
+	</ItemGroup>
+
+</Project>

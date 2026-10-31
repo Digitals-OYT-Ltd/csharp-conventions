@@ -1,0 +1,689 @@
+# ============================================================================
+# Org-wide analyzer + code-style policy, shipped with Digitals.Analyzers.
+# Derived from the master templates/dotnet/.editorconfig (docs repo).
+#
+# Global AnalyzerConfig: severities only. What is NOT ENFORCEABLE here and must
+# stay in each repo's thin .editorconfig:
+#   - editor-core keys: charset, end_of_line, insert_final_newline,
+#     trim_trailing_whitespace, indent_style/size. They need a [*] section,
+#     which this file must never have - see the DO NOT ADD A SECTION HEADER
+#     note below. Editors read .editorconfig from disk and never see this file.
+#   - max_line_length (editor ruler; the RCS0056 gate below DOES live here)
+#   - path-scoped overrides ([**/Pages/**.cshtml.cs], [**/Migrations/**.cs])
+# Test-project policy ships separately in the Digitals.Testing package, whose
+# globalconfig sits at a higher global_level and relaxes what this file sets for
+# production code. Nothing test-specific belongs here.
+#
+# Precedence: a repo-local .editorconfig overrides anything in this file.
+#
+# Pair with (Directory.Build.props — not expressible here):
+#   <Nullable>enable</Nullable>
+#   <WarningsAsErrors>nullable</WarningsAsErrors>
+#   <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+#   <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+# ============================================================================
+is_global = true
+global_level = 100
+
+# ----------------------------------------------------------------------------
+# DO NOT ADD A SECTION HEADER TO THIS FILE. Not [*], not a path glob, nothing.
+#
+# A global AnalyzerConfig only accepts absolute paths as section names. Roslyn
+# rejects anything else with "warning InvalidGlobalSectionName: ... Section will
+# be ignored" - and the ignored section swallows EVERY entry after it, which in
+# this file is the whole severity policy. Verified in a consumer build: with a
+# [*] header present, IDE1006 and SYSLIB1045 stop firing entirely and only the
+# analyzers' own built-in default severities survive. It fails silently apart
+# from that one easily-missed CSC warning.
+#
+# This is also why the editor-core whitespace keys (end_of_line, charset,
+# insert_final_newline, trim_trailing_whitespace, indent_style/size) cannot live
+# here: they are only meaningful inside a [*] section, and no editor reads a
+# globalconfig anyway. They belong in each consuming repo's .editorconfig.
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+# BANNED APIs (BannedSymbols.txt) — the ambient clock (inject TimeProvider) and the int
+# millisecond delay overloads (pass a TimeSpan). The DateTime type ban is DT00001.
+# Warning, not error: each repo escalates via TreatWarningsAsErrors.
+# Escape hatch: #pragma warning disable RS0030 // reason
+# ----------------------------------------------------------------------------
+dotnet_diagnostic.RS0030.severity = warning
+
+# ----------------------------------------------------------------------------
+# CUSTOM ORG RULES (analyzers/dotnet/cs/Digitals.Analyzers.CSharp.dll)
+# DT00001: no System.DateTime (DateOnly/TimeOnly/TimeSpan/DateTimeOffset instead)
+# DT00002: no DateTimeOffset.LocalDateTime/.DateTime (UtcDateTime at boundaries)
+# DT00003: no 'new HttpClient()' (IHttpClientFactory / AddHttpClient)
+# DT00004: no 'dynamic' (resolve types at compile time)
+# DT00006: money as double/float — use decimal (name heuristic, IDE-only)
+# DT00007: no custom TimeProvider subclass (use Microsoft's FakeTimeProvider)
+# DT00008: no method returning a nullable collection (return an empty one)
+# DT00009: no #region (extract a type or a method instead)
+# DT00010: no negative boolean name (IsEligible, not IsNotEligible)
+# DT00011: no local read and then reassigned to an unrelated value (data-flow heuristic, IDE-only)
+# DT00012: file name must match a top-level type it declares (Booking.cs)
+# Own IDs so an interop #pragma never disables the RS0030 clock bans.
+# ----------------------------------------------------------------------------
+dotnet_diagnostic.DT00001.severity = warning
+dotnet_diagnostic.DT00002.severity = warning
+dotnet_diagnostic.DT00003.severity = warning
+dotnet_diagnostic.DT00004.severity = warning
+dotnet_diagnostic.DT00006.severity = suggestion
+dotnet_diagnostic.DT00007.severity = warning
+dotnet_diagnostic.DT00008.severity = warning
+dotnet_diagnostic.DT00009.severity = warning
+dotnet_diagnostic.DT00010.severity = warning
+dotnet_diagnostic.DT00011.severity = suggestion
+dotnet_diagnostic.DT00012.severity = warning
+
+# ----------------------------------------------------------------------------
+# ABSTRACTION-LEVEL RULES
+# Heuristics for "a business method reads as the use-case recipe". The complexity
+# gate (S1541, S3776, S134) counts branches; these catch the straight-line level
+# mixing it lets through. They judge orchestration methods, meaning any method that
+# calls two or more of its type's collaborators (fields, primary-constructor
+# parameters, interface properties; logging, options and other plumbing excluded).
+# DT00013 and DT00016 judge any method. None reads a framework, project or namespace
+# name. Digitals.Testing switches all but DT00017 off in test projects.
+# DT00013: the same 3+ statements, calling 2+ receivers, copied twice in one member
+# DT00014: an object built inline with 5+ members
+# DT00015: orchestration method over 20 statements
+# DT00016: 3+ members of one object set in a row inside a larger method
+# DT00017: a call followed by an 'if not success, throw' check on its result
+# DT00018: data access, HTTP, messaging or System.IO called directly by a type
+#          that does not hold that area's client itself
+# Tuning, in a repo's .editorconfig [*.cs] section:
+#   digitals_orchestration_min_collaborators = 2
+#   digitals_orchestration_ignored_collaborators = Microsoft.Extensions.Logging,...  (replaces the defaults)
+#   digitals_orchestration_types = Acme.Jobs.JobProcessor`1  (always judge overrides of this type)
+#   digitals_orchestration_max_statements = 20
+#   digitals_max_initializer_members = 4
+#   digitals_max_member_assignment_run = 2
+#   digitals_infrastructure_namespaces = Microsoft.EntityFrameworkCore,System.Net.Http  (replaces the defaults)
+#   digitals_repeated_sequence_length = 3
+#   digitals_repeated_sequence_occurrences = 2
+# ----------------------------------------------------------------------------
+dotnet_diagnostic.DT00013.severity = warning
+dotnet_diagnostic.DT00014.severity = warning
+dotnet_diagnostic.DT00015.severity = warning
+dotnet_diagnostic.DT00016.severity = warning
+dotnet_diagnostic.DT00017.severity = warning
+dotnet_diagnostic.DT00018.severity = warning
+
+# ----------------------------------------------------------------------------
+# ORG SEVERITY OVERRIDES — shipped-pack rules off or info-only by default
+# ----------------------------------------------------------------------------
+# SYSLIB1045: [GeneratedRegex] over runtime new Regex (prefer-compile-time-resolution)
+dotnet_diagnostic.SYSLIB1045.severity = warning
+# CA2254: structured log templates — no interpolation in the message
+dotnet_diagnostic.CA2254.severity = warning
+# VSTHRD100: no async void — pinned so a repo-local bulk downgrade can't disable it
+dotnet_diagnostic.VSTHRD100.severity = warning
+# S6513: [ExcludeFromCodeCoverage] must carry a Justification. Ships disabled, so
+# it never fires unless turned on here. An exclusion without a reason is how a
+# coverage number stays green while the untested code grows. Empty and
+# whitespace-only justifications are rejected too. Sonar skips target frameworks
+# where the Justification property does not exist (netstandard2.0, net472), so
+# there is no unfixable warning.
+dotnet_diagnostic.S6513.severity = warning
+# S2692: an IndexOf result tested with '> 0', which misses a match at index 0.
+# S3249: base.GetHashCode()/base.Equals() in a class that derives straight from
+# object, which falls back to reference identity. Both were on by default until
+# SonarAnalyzer.CSharp 10.35 turned them off; set here so they keep firing.
+dotnet_diagnostic.S2692.severity = warning
+dotnet_diagnostic.S3249.severity = warning
+# CA1851: an IEnumerable enumerated more than once. Ships disabled. The failure is
+# invisible in review and expensive at runtime: a deferred LINQ query re-runs the
+# database round trip on every enumeration. Fix by materialising once with
+# ToList()/ToArray(), or by taking IReadOnlyCollection<T> instead.
+dotnet_diagnostic.CA1851.severity = warning
+# CA1310: string comparison whose result depends on the current locale
+# (StartsWith/EndsWith/IndexOf/Compare with no StringComparison). Ships ENABLED but
+# at 'hidden', so it never reaches a build log — the reason it is listed here rather
+# than left alone. Pass StringComparison.Ordinal explicitly. CA1307, the 'for
+# clarity' variant, is deliberately NOT set: it fires on Equals/GetHashCode where
+# the default is already ordinal, and it is the noisier of the two.
+dotnet_diagnostic.CA1310.severity = warning
+# CA1069: two enum members with the same constant value. Ships disabled. Almost
+# always a copy-paste bug, and switch/dictionary lookups then silently pick one.
+dotnet_diagnostic.CA1069.severity = warning
+# Complexity thresholds live in SonarLint.xml next to this file, not here: Sonar
+# reads rule PARAMETERS only from an AdditionalFile named SonarLint.xml, so a
+# severity line here only turns the rule on or off. A repo with its own
+# SonarLint.xml replaces the org file wholesale (see Digitals.Analyzers.targets).
+# Both are distinct from the CRAP limit and the cyclomatic cap in Digitals.Testing:
+# those measure compiled IL during a test run, these measure source at compile time.
+#
+# S3776: cognitive complexity over 15 (Sonar's default, not set in SonarLint.xml).
+# How hard a method is to read: penalises nesting, counts a switch as +1.
+dotnet_diagnostic.S3776.severity = warning
+# S1541: cyclomatic complexity over 15 (SonarLint.xml; Sonar's default is 10). How
+# many paths a method has: counts every switch arm, switch-expression arm and
+# 'or' pattern. S1541 rather than CA1502 on purpose: CA1502 scores a switch
+# expression and an 'is 1 or 2 or 3' pattern as zero, so a ten-arm mapper passes
+# as complexity 1. Measured on a real service: 43 methods over 10, 9 over 15.
+# CA1501/CA1502/CA1505/CA1506 are deliberately not set: they ship disabled and no
+# AnalysisMode turns them on. On the same service CA1505 and CA1501 never reached
+# their thresholds, and CA1506 fired only on Program.cs and a controller.
+dotnet_diagnostic.S1541.severity = warning
+# S134: control flow nested more than 3 deep (Sonar's default). Catches the one
+# deep spot that S3776 averages into a method-wide score. 10 hits on the service.
+dotnet_diagnostic.S134.severity = warning
+# S138/S107: method over 80 lines, more than 7 parameters (Sonar's defaults).
+# Suggestion, not warning: EF configurations and DI constructors are long and wide
+# by design, and they are most of what these rules find.
+# S107 stays at 7 although the standard says ~3: Sonar has one 'max' for methods,
+# constructors, primary constructors and delegates alike (positional records and
+# overrides are exempt). Probed at 4, every 5-dependency DI constructor fired.
+dotnet_diagnostic.S138.severity = suggestion
+dotnet_diagnostic.S107.severity = suggestion
+# S104: file over 1000 lines (Sonar's default). The only working class-size check:
+# Sonar C# has no S1448 (too many methods), and S1200/CA1506 coupling counts fire
+# mostly on composition roots. 2 hits on the service, both real god classes.
+dotnet_diagnostic.S104.severity = warning
+# S1067: more than 3 '&&'/'||' in one expression (Sonar's default). Suggestion: the
+# fix is an extracted, named predicate, which review can judge better than a count.
+dotnet_diagnostic.S1067.severity = suggestion
+
+# --- security: cheap syntactic checks, all shipped disabled ---
+# CA5404/CA5405: token validation turned off, or a validation delegate that always
+# returns true. Both are an authentication bypass, and both read as ordinary config.
+dotnet_diagnostic.CA5404.severity = warning
+dotnet_diagnostic.CA5405.severity = warning
+# CA5390/CA5403: encryption key or certificate hard-coded in source, which puts the
+# secret in git history where rotation cannot reach it. A partial net, not a
+# guarantee: both fire on a literal passed straight to the crypto API, and BOTH MISS
+# the same literal routed through a 'static readonly byte[]' field, which is the more
+# likely real shape. Verified against 0.7.1. Secret scanning still has to exist.
+dotnet_diagnostic.CA5390.severity = warning
+dotnet_diagnostic.CA5403.severity = warning
+
+# --- security: taint analysis, all shipped disabled ---
+# CA3001-CA3012 follow a request value (action parameter, bound model, HttpRequest) into
+# a sink, across methods and classes, and report only when it gets there unchecked. That
+# is what tells a safe SqlCommand or File.ReadAllText from an unsafe one, which no ban can.
+# Measured: CA3001 caught SQL built in a helper of another class (S2077 missed it), CA3003
+# and CA3006 likewise for paths and process starts. On a 16-project service it reported
+# nothing and cost about 2% of analyzer time. Known gaps, verified: CA3007 misses Redirect(url) on
+# ControllerBase, CA3002 misses Content(html) and Razor, CA3005 misses
+# System.DirectoryServices.Protocols. Raw HTML is banned in BannedSymbols.Production.txt.
+dotnet_diagnostic.CA3001.severity = warning
+dotnet_diagnostic.CA3002.severity = warning
+dotnet_diagnostic.CA3003.severity = warning
+dotnet_diagnostic.CA3004.severity = warning
+dotnet_diagnostic.CA3005.severity = warning
+dotnet_diagnostic.CA3006.severity = warning
+dotnet_diagnostic.CA3007.severity = warning
+dotnet_diagnostic.CA3008.severity = warning
+dotnet_diagnostic.CA3009.severity = warning
+dotnet_diagnostic.CA3010.severity = warning
+dotnet_diagnostic.CA3011.severity = warning
+dotnet_diagnostic.CA3012.severity = warning
+
+# --- enum correctness: both ship at 'info', so neither reaches a build log ---
+# CA2248: Enum.HasFlag called with a member of a DIFFERENT enum type. Always returns
+# false, and the compiler accepts it because HasFlag takes Enum.
+dotnet_diagnostic.CA2248.severity = warning
+# RCS1157: a composite [Flags] value covering a bit no member defines — 'All = 7'
+# over Read = 1, Write = 2 silently carries 4. Not the same as CA1069 (duplicate
+# values) or S3265 (bitwise op on a non-flags enum), both of which already fire.
+dotnet_diagnostic.RCS1157.severity = warning
+
+# RCS1261: 'await using' when the resource is IAsyncDisposable in an async method
+# (sync Dispose on DbContext/streams does blocking I/O); auto-fixed by dotnet format
+dotnet_diagnostic.RCS1261.severity = warning
+# Guidance-grade (suggestion): visible in IDE, never gates a build
+# RCS1079: throws NotImplementedException. Suggestion, not warning, on purpose: a
+# stub mid-change is normal and must not fail the build, but one reaching main is
+# worth seeing. Ships disabled, so without this line it never appears at all.
+dotnet_diagnostic.RCS1079.severity = suggestion
+# RCS1208: an 'if' wrapping the rest of the body — invert it into a guard clause
+# and return early. Ships disabled. S1066 (mergeable nested 'if') and S134 (depth)
+# already fire; this is the one guard-clause shape neither catches.
+dotnet_diagnostic.RCS1208.severity = suggestion
+# CA2100: review raw SQL for injection (parameterise, or stay in LINQ)
+dotnet_diagnostic.CA2100.severity = suggestion
+# CA1002/CA1819: read-only collection interfaces over List<T>/T[] properties
+dotnet_diagnostic.CA1002.severity = suggestion
+dotnet_diagnostic.CA1819.severity = suggestion
+# CA1021: return values, not out parameters (TryParse pattern exempt)
+dotnet_diagnostic.CA1021.severity = suggestion
+# S109: no magic numbers — const at the point of use
+dotnet_diagnostic.S109.severity = suggestion
+
+# ----------------------------------------------------------------------------
+# FORMATTING — whitespace + layout (dotnet format applies)
+# ----------------------------------------------------------------------------
+
+# usings: System.* first, no group separators, outside namespace
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:warning
+csharp_blank_lines_between_using_groups = 0
+
+# file-scoped namespace (namespace Foo;) — IDE0161
+csharp_style_namespace_declarations = file_scoped:warning
+
+# braces always, even 1-line if/for (IDE0011)
+csharp_prefer_braces = true:warning
+
+# Allman braces — open brace own line
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+# indent
+csharp_indent_case_contents = true
+csharp_indent_case_contents_when_block = false
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less_than_current
+csharp_indent_block_contents = true
+csharp_indent_braces = false
+
+# spacing
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_around_binary_operators = before_and_after
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
+csharp_space_between_method_declaration_name_and_open_parenthesis = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_method_call_empty_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_after_dot = false
+csharp_space_before_dot = false
+csharp_space_after_semicolon_in_for_statement = true
+csharp_space_before_semicolon_in_for_statement = false
+csharp_space_around_declaration_statements = false
+csharp_space_before_open_square_brackets = false
+csharp_space_between_empty_square_brackets = false
+csharp_space_between_square_brackets = false
+
+# 1 statement / 1 declaration per line
+csharp_preserve_single_line_blocks = true
+csharp_preserve_single_line_statements = false
+# S1659: 1 declaration per line (no 'int a, b;')
+dotnet_diagnostic.S1659.severity = warning
+
+# blank line between member declarations (Roslynator.Formatting.Analyzers; RCS0xxx opt-in, all off by default)
+# RCS0009: blank line between a member and its '///' doc comment
+dotnet_diagnostic.RCS0009.severity = warning
+# RCS0010: blank line between consecutive member declarations
+dotnet_diagnostic.RCS0010.severity = warning
+# RCS0007: blank line between (multi-line) accessors
+dotnet_diagnostic.RCS0007.severity = warning
+# RCS0008: blank line between a closing brace and the next statement
+dotnet_diagnostic.RCS0008.severity = warning
+# RCS0061: blank line between switch sections. Replaces RCS0014, which Roslynator 5.0
+# deleted (it shipped '[deprecated]' in 4.15) — a dead ID here would enforce nothing, silently.
+roslynator_blank_line_between_switch_sections = include
+dotnet_diagnostic.RCS0061.severity = warning
+# RCS0063: remove unnecessary blank line (2+ consecutive)
+dotnet_diagnostic.RCS0063.severity = warning
+
+# line-length hard gate (editor ruler max_line_length stays in repo .editorconfig)
+# RCS0056 has NO bulk auto-fix — first adoption needs manual wrapping
+roslynator_max_line_length = 120
+dotnet_diagnostic.RCS0056.severity = warning
+
+# ----------------------------------------------------------------------------
+# LANGUAGE STYLE — idioms (dotnet format auto-fixes)
+# ----------------------------------------------------------------------------
+
+# var always (IDE0007/IDE0008)
+csharp_style_var_for_built_in_types = true:warning
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = true:warning
+
+# IDE0090: target-typed new — OFF; var-always = 'var b = new Booking();' (type on right)
+csharp_style_implicit_object_creation_when_type_is_apparent = false
+
+# expression-bodied members — '=>' when fits 1 line
+csharp_style_expression_bodied_methods = when_on_single_line:warning
+csharp_style_expression_bodied_constructors = when_on_single_line:warning
+csharp_style_expression_bodied_operators = when_on_single_line:warning
+csharp_style_expression_bodied_properties = when_on_single_line:warning
+csharp_style_expression_bodied_indexers = when_on_single_line:warning
+csharp_style_expression_bodied_accessors = when_on_single_line:warning
+csharp_style_expression_bodied_lambdas = when_on_single_line:warning
+csharp_style_expression_bodied_local_functions = when_on_single_line:warning
+
+# pattern matching
+# IDE0066: switch expression over switch statement
+csharp_style_prefer_switch_expression = true:warning
+# IDE0078: pattern over logical checks — 'n is >= 0 and <= 9'
+csharp_style_prefer_pattern_matching = true:warning
+# IDE0020/0038: 'is' + cast -> type pattern
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+# IDE0019: 'as' + null check -> type pattern
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+# RCS1248: 'is null'/'is not null' over '== null'/'!= null'
+roslynator_null_check_style = pattern_matching
+dotnet_diagnostic.RCS1248.severity = warning
+
+# null handling
+# IDE0031: null propagation — 'x?.Y'
+dotnet_style_null_propagation = true:warning
+# RCS1146: conditional access over null-check + member
+dotnet_diagnostic.RCS1146.severity = warning
+# RCS1077: optimize LINQ method call
+dotnet_diagnostic.RCS1077.severity = warning
+# IDE0029/0030: coalesce — 'x ?? y'
+dotnet_style_coalesce_expression = true:warning
+# IDE0016: throw expression — '_x = x ?? throw ...;'
+csharp_style_throw_expression = true:warning
+# IDE1005: conditional delegate call — 'h?.Invoke(e);'
+csharp_style_conditional_delegate_call = true:warning
+
+# modern idioms
+# IDE0018: inline out var
+csharp_style_inlined_variable_declaration = true:warning
+# IDE0056: index-from-end — 'arr[^1]'
+csharp_style_prefer_index_operator = true:warning
+# IDE0057: range op over Substring — 'value[..n]'
+csharp_style_prefer_range_operator = true:warning
+# IDE0032: auto-property over trivial get/set + backing field
+dotnet_style_prefer_auto_properties = true:warning
+# IDE0071: simplified interpolation — '$"{x}"'
+dotnet_style_prefer_simplified_interpolation = true:warning
+# IDE0054/0074: compound assignment — 'x += 1'
+dotnet_style_prefer_compound_assignment = true:warning
+# IDE0034: simplify 'default'
+csharp_prefer_simple_default_expression = true:warning
+# IDE0062: static local functions when they capture nothing
+csharp_style_prefer_static_local_function = true:warning
+# IDE0063: 'using' declarations over using blocks
+csharp_prefer_simple_using_statement = true:warning
+
+# collection expressions ([] over new List<T>(), Array.Empty, .ToList())
+dotnet_style_prefer_collection_expression = true
+dotnet_diagnostic.IDE0028.severity = warning
+dotnet_diagnostic.IDE0300.severity = warning
+dotnet_diagnostic.IDE0301.severity = warning
+dotnet_diagnostic.IDE0305.severity = warning
+
+# primary constructors (IDE0290)
+csharp_style_prefer_primary_constructors = true
+dotnet_diagnostic.IDE0290.severity = warning
+
+# ----------------------------------------------------------------------------
+# CLARITY & IMMUTABILITY
+# ----------------------------------------------------------------------------
+
+# IDE0003: no 'this.' — _camelCase fields already disambiguate
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# IDE0049: keywords over BCL names — 'int'/'string', not 'Int32'/'String'
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning
+dotnet_style_predefined_type_for_member_access = true:warning
+
+# IDE0040: write accessibility modifier
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+
+# IDE0044: fields readonly when never reassigned outside ctor
+dotnet_style_readonly_field = true:warning
+
+# IDE0036: modifier order
+csharp_preferred_modifier_order = public,private,protected,internal,file,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,required,volatile,async:warning
+
+# IDE0130: namespace matches folder
+# suggestion not warning: its fixer crashes 'dotnet format' apply mode
+dotnet_style_namespace_match_folder = true:suggestion
+
+# ----------------------------------------------------------------------------
+# CODE QUALITY / ANALYZERS — correctness + API (CA / Sxxxx / CS / IDE)
+# ----------------------------------------------------------------------------
+
+# IDE0005: drop unused usings
+dotnet_diagnostic.IDE0005.severity = warning
+# IDE0001: simplify name (System.String -> string). Editor-only: no build-time CodeStyle
+# analyzer reports it (verified by enumerating SupportedDiagnostics), so this line sets the
+# IDE's severity and gates nothing in a build.
+dotnet_diagnostic.IDE0001.severity = warning
+# IDE0051/0052: drop unread private members + fields (dead code)
+dotnet_diagnostic.IDE0051.severity = warning
+dotnet_diagnostic.IDE0052.severity = warning
+# S125: no commented-out code — git remembers
+dotnet_diagnostic.S125.severity = warning
+
+# --- correctness: fail build ---
+# CA2016: forward CancellationToken to callees that take one
+dotnet_diagnostic.CA2016.severity = warning
+# CS8509: switch expr handles every case
+dotnet_diagnostic.CS8509.severity = warning
+# IDE0072/IDE0010: name every enum member in a switch even when a '_'/default arm
+# exists — otherwise the discard silently swallows members added later (CS8509
+# only fires when there is NO default arm). IDE0072 = switch expression,
+# IDE0010 = switch statement.
+dotnet_diagnostic.IDE0072.severity = warning
+dotnet_diagnostic.IDE0010.severity = warning
+# CA2200: rethrow 'throw;' not 'throw ex;'
+dotnet_diagnostic.CA2200.severity = warning
+# CA1806: don't ignore method results
+dotnet_diagnostic.CA1806.severity = warning
+
+# --- async safety ---
+# CS4014: un-awaited Task = ERROR — silent fire-and-forget bug
+dotnet_diagnostic.CS4014.severity = warning
+# VSTHRD002: no sync-over-async ('.Result'/'.Wait()') — deadlock risk
+dotnet_diagnostic.VSTHRD002.severity = warning
+# VSTHRD103: call async overload inside async method
+dotnet_diagnostic.VSTHRD103.severity = warning
+# VSTHRD110: observe async result (don't drop returned Task)
+dotnet_diagnostic.VSTHRD110.severity = warning
+# VSTHRD200: async methods end with 'Async'
+dotnet_diagnostic.VSTHRD200.severity = warning
+# CA1849: call async methods inside async method — OFF; VSTHRD103 reports every call it
+# does, and GetAwaiter().GetResult() as well. S6966 covers EF's ToList()/FirstOrDefault().
+dotnet_diagnostic.CA1849.severity = none
+
+# --- performance ---
+# CA1848: LoggerMessage delegates on hot paths
+dotnet_diagnostic.CA1848.severity = suggestion
+# CA1873: no costly log args when level off
+dotnet_diagnostic.CA1873.severity = suggestion
+# CA1869: cache + reuse JsonSerializerOptions
+dotnet_diagnostic.CA1869.severity = warning
+# CA1850: one-shot static hashing — 'SHA512.HashData(bytes)'
+dotnet_diagnostic.CA1850.severity = warning
+
+# --- API design / naming ---
+# CA1707: no underscores in identifiers. A gate, not guidance: the naming rules
+# below are the whole point of IDE1006 and an underscore defeats every one of
+# them. Test method names are underscore-separated by design, and Digitals.Testing
+# turns this off for test projects.
+dotnet_diagnostic.CA1707.severity = warning
+
+# --- the rest of this block is guidance, not a gate ---
+# CA1000: no static members on generic types
+dotnet_diagnostic.CA1000.severity = suggestion
+# CA1716: no identifiers like reserved keywords
+dotnet_diagnostic.CA1716.severity = suggestion
+# CA1711: no reserved type suffixes
+dotnet_diagnostic.CA1711.severity = suggestion
+# CA2225: operator overload needs named twin
+dotnet_diagnostic.CA2225.severity = suggestion
+# CA1056: URI properties Uri not string
+dotnet_diagnostic.CA1056.severity = suggestion
+# S1075: no hardcoded absolute URIs
+dotnet_diagnostic.S1075.severity = suggestion
+# CA1515: make public types internal. Only fires in application projects, where
+# nothing external consumes the API. Suggestion because a sibling project in the
+# same solution may legitimately reference a type. Test projects reach production
+# internals via InternalsVisibleTo, and Digitals.Testing turns this off for the
+# test project's own public types.
+dotnet_diagnostic.CA1515.severity = suggestion
+# CA1812: internal class never instantiated — DI-registered types look unused
+dotnet_diagnostic.CA1812.severity = suggestion
+# CA1724: type name clashes namespace
+dotnet_diagnostic.CA1724.severity = suggestion
+# CA1308: normalize ToUpperInvariant not ToLowerInvariant
+dotnet_diagnostic.CA1308.severity = suggestion
+# CA5394: System.Random not crypto-secure — fine for jitter/sampling
+dotnet_diagnostic.CA5394.severity = suggestion
+# S1135: TODO comments — tracked future-work markers, not build errors
+dotnet_diagnostic.S1135.severity = suggestion
+
+# --- intentionally OFF (with reason) ---
+# CA1034: public nested types — ALLOWED (group related DTOs)
+dotnet_diagnostic.CA1034.severity = none
+# CA2007: ConfigureAwait(false) NOT needed — no SynchronizationContext in ASP.NET Core / workers
+dotnet_diagnostic.CA2007.severity = none
+# CA1062: null-check public args — OFF; nullable ref types already enforce non-null
+dotnet_diagnostic.CA1062.severity = none
+# CA1040: empty marker interfaces — ALLOWED (DI/handler markers)
+dotnet_diagnostic.CA1040.severity = none
+# CA2000: dispose-before-scope-loss — OFF; DI owns lifetimes
+dotnet_diagnostic.CA2000.severity = none
+# CA1031: catch (Exception) — ALLOWED at boundaries / top-level handlers
+dotnet_diagnostic.CA1031.severity = none
+# CA1303: literal strings in log/exception messages — OFF
+dotnet_diagnostic.CA1303.severity = none
+# VSTHRD010: Visual Studio main-thread affinity — OFF; no UI thread in services. Ships
+# enabled and is the costliest VS Threading analyzer, so leaving it on bills every build.
+dotnet_diagnostic.VSTHRD010.severity = none
+
+# --- duplicates OFF: the rule named on each line reports the same code ---
+# Proved by building one seeded file per construct and reading which IDs fired; each
+# rule kept fired on every variant the dropped one did. Keep one report per problem,
+# and one analyzer run. Turning a kept rule off in a repo now leaves the gap uncovered.
+# S3168 async void: VSTHRD100
+dotnet_diagnostic.S3168.severity = none
+# S4586, RCS1210 null returned as a Task: VSTHRD114
+dotnet_diagnostic.S4586.severity = none
+dotnet_diagnostic.RCS1210.severity = none
+# S2996 initialised [ThreadStatic] field: CA2019
+dotnet_diagnostic.S2996.severity = none
+# S3005 [ThreadStatic] on an instance field: CA2259
+dotnet_diagnostic.S3005.severity = none
+# S2223 visible non-constant static field: CA2211
+dotnet_diagnostic.S2223.severity = none
+# S1104 public field: CA1051 (instance), CA2211 (static)
+dotnet_diagnostic.S1104.severity = none
+# S2995 ReferenceEquals on a value type: CA2013
+dotnet_diagnostic.S2995.severity = none
+# S5034 ValueTask consumed twice: CA2012
+dotnet_diagnostic.S5034.severity = none
+# S927 parameter renamed from the base or interface: CA1725, and CS8826 for partials
+dotnet_diagnostic.S927.severity = none
+# S4019 base method hidden: CA1061
+dotnet_diagnostic.S4019.severity = none
+# S2290 virtual field-like event: CA1070
+dotnet_diagnostic.S2290.severity = none
+# S3903 type outside a namespace: CA1050
+dotnet_diagnostic.S3903.severity = none
+# S6678 camelCase log placeholder: CA1727
+dotnet_diagnostic.S6678.severity = none
+# S2629 non-constant log template: CA2254
+dotnet_diagnostic.S2629.severity = none
+# S6674 malformed log template braces: CA2023
+dotnet_diagnostic.S6674.severity = none
+# S3445, RCS1044 'throw ex;': CA2200
+dotnet_diagnostic.S3445.severity = none
+dotnet_diagnostic.RCS1044.severity = none
+# S3928 wrong paramName in an ArgumentException: CA2208
+dotnet_diagnostic.S3928.severity = none
+# S1155 Count() > 0 instead of Any(): CA1827, CA1829
+dotnet_diagnostic.S1155.severity = none
+# S112 throwing Exception/SystemException/...: CA2201, which lists more types
+dotnet_diagnostic.S112.severity = none
+# S3993, RCS1203 attribute without [AttributeUsage]: CA1018
+dotnet_diagnostic.S3993.severity = none
+dotnet_diagnostic.RCS1203.severity = none
+# S1118 utility class with a public constructor: RCS1102, which offers the 'static' fix
+dotnet_diagnostic.S1118.severity = none
+# S3262 override drops 'params': RCS1193, which also catches one that adds it
+dotnet_diagnostic.S3262.severity = none
+# S6610 StartsWith/EndsWith with a one-char string: CA1865, CA1866
+dotnet_diagnostic.S6610.severity = none
+# S1210 IComparable without comparison operators: CA1036
+dotnet_diagnostic.S1210.severity = none
+# S3376 Attribute/EventArgs/Exception name suffix: CA1710
+dotnet_diagnostic.S3376.severity = none
+# RCS1155 ToLower()/ToUpper() before comparing: CA1862, CA1309
+dotnet_diagnostic.RCS1155.severity = none
+# RCS1059 lock on 'this' or a type: S2551, which also catches a string literal
+dotnet_diagnostic.RCS1059.severity = none
+# RCS1075 empty catch of Exception: S2486
+dotnet_diagnostic.RCS1075.severity = none
+# CA1822 member could be static: S2325, which also checks public members
+dotnet_diagnostic.CA1822.severity = none
+
+# --- unused params ---
+# IDE0060: flag unused method params — non_public only
+dotnet_code_quality_unused_parameters = non_public:warning
+
+# ----------------------------------------------------------------------------
+# NAMING (IDE1006) — order-sensitive; specific before general
+# ----------------------------------------------------------------------------
+
+# The per-rule 'severity' below is IDE-only; build enforcement needs the
+# diagnostic severity set explicitly (learn.microsoft.com, IDE1006 docs).
+dotnet_diagnostic.IDE1006.severity = warning
+
+# styles
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_style.camel_case.capitalization = camel_case
+dotnet_naming_style.i_prefix.required_prefix = I
+dotnet_naming_style.i_prefix.capitalization = pascal_case
+dotnet_naming_style.t_prefix.required_prefix = T
+dotnet_naming_style.t_prefix.capitalization = pascal_case
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+
+# interface -> IPascalCase (IEmailSender)
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_rule.interfaces_i_prefix.symbols = interfaces
+dotnet_naming_rule.interfaces_i_prefix.style = i_prefix
+dotnet_naming_rule.interfaces_i_prefix.severity = warning
+
+# generic type param -> TPascalCase (TEntity)
+dotnet_naming_symbols.type_parameters.applicable_kinds = type_parameter
+dotnet_naming_rule.type_parameters_t_prefix.symbols = type_parameters
+dotnet_naming_rule.type_parameters_t_prefix.style = t_prefix
+dotnet_naming_rule.type_parameters_t_prefix.severity = warning
+
+# const -> PascalCase — before fields so private const matches here, not _camelCase
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_rule.constants_pascal.symbols = constants
+dotnet_naming_rule.constants_pascal.style = pascal_case
+dotnet_naming_rule.constants_pascal.severity = warning
+
+# static readonly -> PascalCase
+dotnet_naming_symbols.static_readonly.applicable_kinds = field
+dotnet_naming_symbols.static_readonly.required_modifiers = static, readonly
+dotnet_naming_rule.static_readonly_pascal.symbols = static_readonly
+dotnet_naming_rule.static_readonly_pascal.style = pascal_case
+dotnet_naming_rule.static_readonly_pascal.severity = warning
+
+# private/internal instance fields -> _camelCase (_repository)
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private, internal
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel
+dotnet_naming_rule.private_fields_underscore.severity = warning
+
+# params + locals -> camelCase (bookingId)
+dotnet_naming_symbols.params_locals.applicable_kinds = parameter, local
+dotnet_naming_rule.params_locals_camel.symbols = params_locals
+dotnet_naming_rule.params_locals_camel.style = camel_case
+dotnet_naming_rule.params_locals_camel.severity = warning
+
+# types + members -> PascalCase — interfaces above
+dotnet_naming_symbols.types_members.applicable_kinds = namespace, class, struct, enum, delegate, method, property, event
+dotnet_naming_rule.types_members_pascal.symbols = types_members
+dotnet_naming_rule.types_members_pascal.style = pascal_case
+dotnet_naming_rule.types_members_pascal.severity = warning

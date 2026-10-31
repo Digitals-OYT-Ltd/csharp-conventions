@@ -1,0 +1,130 @@
+# Testing (Digitals.Testing): validates every change that touches it, and publishes it to nuget.org on a
+# testing/v* tag. Analyzers has its own workflow and tag, so each package releases on its own.
+#
+# Versioning: MinVer with tag prefix `testing/v` (MinVerTagPrefix in the csproj). Tag testing/v1.2.0 packs
+# 1.2.0. Releasing is `git tag testing/v1.2.0 && git push origin testing/v1.2.0`.
+#
+# Auth: nuget.org Trusted Publishing (OIDC), no long-lived API key. One-time setup on nuget.org
+# (Account > Trusted Publishing > add policy): owner Digitals-OYT-Ltd, repository csharp-conventions,
+# workflow file testing.yml, environment empty. Each package's workflow needs its own policy, and renaming
+# this file breaks publishing until the policy is updated. Then add the repository secret NUGET_USER:
+# the nuget.org profile name, not an email. A new policy on a private repo is only "temporarily
+# active" for 7 days, until the first successful publish locks it to the repo.
+name: Testing
+
+on:
+  push:
+    branches: [main]
+    tags: ['testing/v*']
+    # GitHub doesn't evaluate path filters on a tag push, so a tag always runs.
+    paths: &paths
+      - src/Digitals.Testing/**
+      - src/Digitals.Testing.CSharp/**
+      - src/Digitals.Testing.Coverage/**
+      - tests/Digitals.Testing.CSharp.Tests/**
+      - tests/Digitals.Testing.Coverage.Tests/**
+      - tests/Directory.Build.props
+      - docs/rules/testing.md
+      - Directory.Build.props
+      - Directory.Packages.props
+      - icon.png
+      - global.json
+      - nuget.config
+      - .editorconfig
+      - scripts/**
+      - .github/workflows/testing.yml
+  pull_request:
+    branches: [main]
+    paths: *paths
+  # A manual re-run from the Actions tab. Select the tag as the ref, never a branch: on a branch MinVer
+  # packs a prerelease and nothing publishes.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v5
+        with:
+          # MinVer needs the tags; a shallow clone versions everything as 0.0.0-alpha.
+          fetch-depth: 0
+
+      - name: ⚙️ Use .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: 🎨 Format Check
+        run: dotnet format --verify-no-changes --include src/Digitals.Testing/ src/Digitals.Testing.CSharp/ src/Digitals.Testing.Coverage/ tests/Digitals.Testing.CSharp.Tests/ tests/Digitals.Testing.Coverage.Tests/
+
+      - name: 🔬 Tests
+        shell: pwsh
+        run: ./scripts/test-unit.ps1 -Package Testing
+
+      # A rule row still in AnalyzerReleases.Unshipped.md means the ledger was not moved in the release
+      # commit. RS2008 cannot tell; this fails the tag build before anything ships.
+      - name: 🧾 Check Release Ledger
+        if: startsWith(github.ref, 'refs/tags/testing/v')
+        shell: pwsh
+        run: ./scripts/check-release-ledger.ps1 -Package Testing
+
+      - name: 🗜️ Build and Pack
+        shell: pwsh
+        run: ./scripts/pack.ps1 -Package Testing
+
+      - name: 📤 Upload Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: testing-nupkg
+          path: artifacts/*.nupkg
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/testing/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC token for NuGet/login
+      contents: write   # the GitHub Release
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 📥 Download Package
+        uses: actions/download-artifact@v4
+        with:
+          name: testing-nupkg
+          path: artifacts
+
+      # nuget.org's temporary API key lives for an hour, so ask for it just before the push.
+      - name: 🔐 Authenticate to NuGet (OIDC -> short-lived API key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      # The tag fixes the version, so a re-run on the same tag skips what is already there.
+      - name: 🚀 Push to nuget.org
+        run: >-
+          dotnet nuget push artifacts/*.nupkg
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      # PackageReleaseNotes points consumers at this repo's releases page, so the release has to exist.
+      # The notes start at this package's previous tag, not whichever package released last. Skipped
+      # when the tag already has a release.
+      - name: 🏷️ Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then exit 0; fi
+          previous=$(git tag --list 'testing/v*' --merged "$GITHUB_REF_NAME" --sort=-v:refname | grep -vxF "$GITHUB_REF_NAME" | head -n 1 || true)
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes \
+            ${previous:+--notes-start-tag "$previous"} artifacts/*.nupkg
