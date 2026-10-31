@@ -11,4 +11,11 @@
 		<GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)../src/Digitals.Testing/build/config/Digitals.Testing.globalconfig" />
 	</ItemGroup>
 
+	<!--
+		And the DT1 rules, built from source, as an analyzer only. Consumers get them from the package.
+	-->
+	<ItemGroup>
+		<ProjectReference Include="$(MSBuildThisFileDirectory)../src/Digitals.Testing.CSharp/Digitals.Testing.CSharp.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
 </Project>

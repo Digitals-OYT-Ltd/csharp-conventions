@@ -35,6 +35,7 @@ public sealed class LargeObjectInitializerAnalyzer : DiagnosticAnalyzer
         category: "Digitals.Design",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00014",
         description: "An orchestration method should read as a list of steps. An object built inline with five or more"
             + " named members drops the reader to property level between those steps. A factory or extension method"
             + " ('item.ToOrderLine(order)') names the step and can be tested on its own. Not reported: the object the"

@@ -8,6 +8,7 @@ namespace Digitals.Analyzers.CSharp.Tests;
 /// duplicated ID is ignored in silence, and a missing is_global turns the file into an ordinary
 /// editorconfig that applies to nothing. Each is a footgun AGENTS.md documents from experience.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class GlobalConfigTests
 {
     private static readonly string[] KnownSeverities = ["none", "silent", "suggestion", "warning", "error", "default"];

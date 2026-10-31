@@ -28,7 +28,8 @@ public sealed class NegativeBooleanNameAnalyzer : DiagnosticAnalyzer
         messageFormat: "'{0}' is a negative boolean — name the positive condition instead, so no caller has to read a double negative",
         category: "Digitals.Naming",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00010");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

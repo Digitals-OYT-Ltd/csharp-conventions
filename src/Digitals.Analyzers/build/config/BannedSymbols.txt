@@ -1,23 +1,23 @@
-# Banned symbols, enforced by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030).
-# Format: <doc-comment-id>;<message shown in the diagnostic>
-#   P: = property, M: = method, T: = type
-#
-# Time: inject TimeProvider (TimeProvider.System in DI composition roots,
-# FakeTimeProvider in tests). A custom clock abstraction cannot be implemented
-# without calling one of these, so this list also chokes homegrown IClock types.
+// Banned symbols, enforced by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030).
+// Format: <doc-comment-id>;<message shown in the diagnostic>
+//   P: = property, M: = method, T: = type
+//
+// Time: inject TimeProvider (TimeProvider.System in DI composition roots,
+// FakeTimeProvider in tests). A custom clock abstraction cannot be implemented
+// without calling one of these, so this list also chokes homegrown IClock types.
 P:System.DateTime.Now;Inject TimeProvider and use GetLocalNow()
 P:System.DateTime.UtcNow;Inject TimeProvider and use GetUtcNow()
 P:System.DateTime.Today;Inject TimeProvider and use GetLocalNow().Date
 P:System.DateTimeOffset.Now;Inject TimeProvider and use GetLocalNow()
 P:System.DateTimeOffset.UtcNow;Inject TimeProvider and use GetUtcNow()
 
-# Temporal-type bans (DateTime, DateTimeOffset.LocalDateTime/.DateTime) live in the
-# custom analyzer (DT00001/DT00002, analyzers/dotnet/cs/), NOT here: a boundary
-# #pragma for RS0030 must never also switch off the ambient-clock bans above.
+// Temporal-type bans (DateTime, DateTimeOffset.LocalDateTime/.DateTime) live in the
+// custom analyzer (DT00001/DT00002, analyzers/dotnet/cs/), NOT here: a boundary
+// #pragma for RS0030 must never also switch off the ambient-clock bans above.
 
-# Durations as a bare int: 'Task.Delay(5)' is 5 what? The int overloads take milliseconds,
-# and a seconds value passed to one ships silently. The TimeSpan overloads say the unit at
-# the call site. Only the int overloads are listed; every TimeSpan twin stays allowed.
+// Durations as a bare int: 'Task.Delay(5)' is 5 what? The int overloads take milliseconds,
+// and a seconds value passed to one ships silently. The TimeSpan overloads say the unit at
+// the call site. Only the int overloads are listed; every TimeSpan twin stays allowed.
 M:System.Threading.Tasks.Task.Delay(System.Int32);Pass a TimeSpan: Task.Delay(TimeSpan.FromSeconds(5))
 M:System.Threading.Tasks.Task.Delay(System.Int32,System.Threading.CancellationToken);Pass a TimeSpan: Task.Delay(TimeSpan.FromSeconds(5), cancellationToken)
 M:System.Threading.Thread.Sleep(System.Int32);Pass a TimeSpan: Thread.Sleep(TimeSpan.FromSeconds(5))

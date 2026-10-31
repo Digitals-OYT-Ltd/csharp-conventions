@@ -11,6 +11,7 @@ namespace Digitals.Analyzers.CSharp.Tests;
 /// the consumer's own SDK and AnalysisLevel, not from this package, and are not checked.
 /// A build-artifact test on purpose: it reads the restored packages from disk.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed partial class VendorDiagnosticIdsTests
 {
     [GeneratedRegex(@"^(S\d|RCS|VSTHRD|RS\d|DT)")]

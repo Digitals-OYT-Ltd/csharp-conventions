@@ -36,6 +36,7 @@ public sealed class OrchestrationInfrastructureCallAnalyzer : DiagnosticAnalyzer
         category: "Digitals.Design",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00018",
         description: "An orchestration method that also calls data access, HTTP, storage, messaging, mail or file APIs"
             + " directly mixes wire-level detail into its steps. Reported once per API area per method. Not reported:"
             + " System.IO.Path, an object created as the return value, and an area whose client the type holds itself"

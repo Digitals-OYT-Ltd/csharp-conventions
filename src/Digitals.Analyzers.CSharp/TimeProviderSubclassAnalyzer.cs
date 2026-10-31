@@ -22,7 +22,8 @@ public sealed class TimeProviderSubclassAnalyzer : DiagnosticAnalyzer
         messageFormat: "'{0}' derives from TimeProvider — use FakeTimeProvider (Microsoft.Extensions.TimeProvider.Testing) in tests, TimeProvider.System in production",
         category: "Digitals.Temporal",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00007");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

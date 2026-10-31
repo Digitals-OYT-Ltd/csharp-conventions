@@ -8,6 +8,7 @@ using Verify = Microsoft.CodeAnalysis.CSharp.Testing.CSharpAnalyzerTest<
 
 namespace Digitals.Analyzers.CSharp.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class NullableCollectionReturnAnalyzerTests
 {
     private static Verify Test(string source) => new()

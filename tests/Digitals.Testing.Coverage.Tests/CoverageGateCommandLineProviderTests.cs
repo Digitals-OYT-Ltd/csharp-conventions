@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Digitals.Testing.Coverage.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class CoverageGateCommandLineProviderTests
 {
     private static readonly CoverageGateCommandLineProvider Provider = new();

@@ -32,6 +32,7 @@ public sealed class InlineResultUnwrapAnalyzer : DiagnosticAnalyzer
         category: "Digitals.Design",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00017",
         description: "In an orchestration method, a call whose result is checked and thrown on in the next statement"
             + " ('var upload = await blob.UploadAsync(...); if (!upload.IsSuccess) throw ...;') spends two or more"
             + " lines of the recipe on one step's error handling. A helper that makes the call and throws on failure"

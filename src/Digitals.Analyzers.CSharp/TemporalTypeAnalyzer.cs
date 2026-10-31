@@ -25,7 +25,8 @@ public sealed class TemporalTypeAnalyzer : DiagnosticAnalyzer
         messageFormat: "Use DateOnly (calendar date), TimeOnly (time of day), TimeSpan (duration) or DateTimeOffset in UTC (instant); DateTime only at interop boundaries, converted immediately",
         category: "Digitals.Temporal",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00001");
 
     /// <summary>The DT00002 descriptor.</summary>
     public static readonly DiagnosticDescriptor AmbientConversion = new(
@@ -34,7 +35,8 @@ public sealed class TemporalTypeAnalyzer : DiagnosticAnalyzer
         messageFormat: "'DateTimeOffset.{0}' reintroduces an ambient-zone DateTime; convert at boundaries with UtcDateTime",
         category: "Digitals.Temporal",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00002");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

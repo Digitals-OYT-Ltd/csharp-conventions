@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Digitals.Testing.Coverage.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class MethodSummaryTests
 {
     // The shape Microsoft's coverage engine and coverlet both emit: complexity on the method,

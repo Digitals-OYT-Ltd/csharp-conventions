@@ -37,6 +37,7 @@ public sealed class MemberAssignmentRunAnalyzer : DiagnosticAnalyzer
         category: "Digitals.Design",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00016",
         description: "Three or more assignments in a row to members of one object ('order.Status = ...; order.ClosedAt"
             + " = ...; order.ClosedBy = ...;') inside a larger method drop the reader from the method's steps to"
             + " property level. Name the change: a behaviour method on the object ('order.Close(by, now)') or a helper."

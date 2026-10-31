@@ -31,20 +31,24 @@ of its own. Reference it once in `Directory.Build.props` and it reaches every pr
 <PackageReference Include="Digitals.Analyzers" PrivateAssets="all" />
 ```
 
+That form assumes central package management, with the version in `Directory.Packages.props`. Without it, add
+`Version="x.y.z"` to the reference, taking the latest from
+[nuget.org](https://www.nuget.org/packages/Digitals.Analyzers).
+
 This page covers what the package adds itself: the `DT0####` Roslyn rules, the APIs it bans through `RS0030`, and the
 `DIGB` checks it runs before a build. The [severity policy](#severity-policy) at the end says which vendor rules it
 raises to a warning and which it turns down to a suggestion. A finding prints its file, line and column, the rule ID and
 the message, so search this page for the ID.
 
-The examples are small projects: bookings for meeting rooms, orders, invoices and a storefront.
-Each was built against Digitals.Analyzers 0.11.0, and each fix was built again to check it passes.
+The examples are small projects: bookings for meeting rooms, orders, invoices and a storefront. Each was built against
+the package, and each fix was built again to check it passes.
 
 ## Where the rules apply
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../images/rules-analyzers-scope-dark.svg">
-    <img alt="Digitals.Analyzers covers every project in a repo. Inside it, test projects also reference Digitals.Testing, which turns six DT rules off. Each panel lists the rules that run there" src="../images/rules-analyzers-scope-light.svg" width="860">
+    <img alt="Digitals.Analyzers covers every project in a repo. Inside it, test projects also reference Digitals.Testing, which turns six DT rules and the production-only bans off. Each panel lists the rules that run there" src="../images/rules-analyzers-scope-light.svg" width="860">
   </picture>
 </p>
 
@@ -67,12 +71,14 @@ Every rule below has the same parts:
 - Why the rule exists.
 - A diff. The red lines fail the rule, the green lines pass it.
 - What `dotnet build` prints for the red lines, captured from a real build. The path is cut to the project folder, and the
-  trailing `[…/X.csproj]` is dropped. The builds ran with `TreatWarningsAsErrors` off so that every finding prints as a
-  `warning`; with the org setting on, the same line says `error`.
+  trailing `[…/X.csproj]` is dropped. The builds ran with `TreatWarningsAsErrors` off, and
+  `DigitalsAllowWarningsNotAsErrors` set so `DIGB003` let them, so that every finding prints as a `warning`. With
+  `TreatWarningsAsErrors` on, the same line says `error`. A `DT` line ends with the rule's link to this page.
 
 `DT00006` and `DT00011` are suggestions, and `dotnet build` never prints a suggestion. Their lines come from the SARIF log
 the package writes with `dotnet build -p:DigitalsSarifDir=sarif`, printed in the same shape with `note` in place of
-`warning`. The build checks are MSBuild errors, so their lines point at the package's targets file instead of your code.
+`warning`. The build checks are MSBuild diagnostics, so their lines point at the package's targets file instead of your
+code, and include the package version they ran with.
 
 ## The rules
 
@@ -106,7 +112,7 @@ what the value is: `DateOnly` for a calendar date, `TimeOnly` for a time of day,
 ```
 
 ```text
-Bookings/Booking.cs(5,12): warning DT00001: Use DateOnly (calendar date), TimeOnly (time of day), TimeSpan (duration) or DateTimeOffset in UTC (instant); DateTime only at interop boundaries, converted immediately
+Bookings/Booking.cs(5,12): warning DT00001: Use DateOnly (calendar date), TimeOnly (time of day), TimeSpan (duration) or DateTimeOffset in UTC (instant); DateTime only at interop boundaries, converted immediately (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00001)
 ```
 
 > **Note:** A `using Stamp = System.DateTime;` alias is reported once, on the alias line, and not where `Stamp` is used. The rule has its own ID rather than reusing `RS0030`, so a `#pragma` for an interop `DateTime` never also switches off the clock ban.
@@ -129,7 +135,7 @@ boundary needs a `DateTime`, convert with `.UtcDateTime`. It holds the same tick
 ```
 
 ```text
-Bookings/LegacyCalendar.cs(5,72): warning DT00002: 'DateTimeOffset.DateTime' reintroduces an ambient-zone DateTime; convert at boundaries with UtcDateTime
+Bookings/LegacyCalendar.cs(5,72): warning DT00002: 'DateTimeOffset.DateTime' reintroduces an ambient-zone DateTime; convert at boundaries with UtcDateTime (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00002)
 ```
 
 ### `DT00007`
@@ -150,7 +156,7 @@ members than the code under test calls, and it can't be advanced. Use `FakeTimeP
 ```
 
 ```text
-Bookings/FixedClock.cs(3,21): warning DT00007: 'FixedClock' derives from TimeProvider — use FakeTimeProvider (Microsoft.Extensions.TimeProvider.Testing) in tests, TimeProvider.System in production
+Bookings/FixedClock.cs(3,21): warning DT00007: 'FixedClock' derives from TimeProvider — use FakeTimeProvider (Microsoft.Extensions.TimeProvider.Testing) in tests, TimeProvider.System in production (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00007)
 ```
 
 ## Types and resources
@@ -179,7 +185,7 @@ caught too.
 ```
 
 ```text
-Storefront/ExchangeRates.cs(7,28): warning DT00003: Use IHttpClientFactory (AddHttpClient) — a new HttpClient per call exhausts sockets
+Storefront/ExchangeRates.cs(7,28): warning DT00003: Use IHttpClientFactory (AddHttpClient) — a new HttpClient per call exhausts sockets (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00003)
 ```
 
 The client is registered with `services.AddHttpClient<ExchangeRates>();`.
@@ -201,7 +207,7 @@ your own that happens to be called `dynamic` isn't reported.
 ```
 
 ```text
-Orders/OrderTotals.cs(5,33): warning DT00004: Resolve types at compile time — generics, DI, or a typed model instead of dynamic
+Orders/OrderTotals.cs(5,33): warning DT00004: Resolve types at compile time — generics, DI, or a typed model instead of dynamic (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00004)
 ```
 
 ### `DT00006`
@@ -222,7 +228,7 @@ it is a suggestion: it shows in the IDE and never fails a build.
 ```
 
 ```text
-Invoices/InvoiceLine.cs(5,19): note DT00006: 'UnitPrice' looks like a money value held as double — binary floating point loses cents; use decimal
+Invoices/InvoiceLine.cs(5,19): note DT00006: 'UnitPrice' looks like a money value held as double — binary floating point loses cents; use decimal (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00006)
 ```
 
 ### `DT00008`
@@ -230,7 +236,7 @@ Invoices/InvoiceLine.cs(5,19): note DT00006: 'UnitPrice' looks like a money valu
 <img alt="Every project" src="https://img.shields.io/badge/applies-Every_project-0969da"> <img alt="From Digitals" src="https://img.shields.io/badge/from-Digitals-1a7f37">
 
 A method never returns a nullable collection. To a caller, `null` and empty mean the same thing, nothing to loop over,
-so the `?` adds no information and costs a null check at every call site. Return `[]` or `Array.Empty<T>()`. The rule
+so the `?` adds no information and costs a null check at every call site. Return `[]`. The rule
 looks inside `Task<T>` and `ValueTask<T>`, and covers arrays, `ImmutableArray<T>?` and `IAsyncEnumerable<T>`.
 `string?` is left alone, and so are properties and fields.
 
@@ -243,7 +249,7 @@ looks inside `Task<T>` and `ValueTask<T>`, and covers arrays, `ImmutableArray<T>
 ```
 
 ```text
-Orders/IOrderStore.cs(5,33): warning DT00008: 'FindByCustomerAsync' returns a nullable collection — null and empty mean the same thing to a caller; return an empty collection instead
+Orders/IOrderStore.cs(5,33): warning DT00008: 'FindByCustomerAsync' returns a nullable collection — null and empty mean the same thing to a caller; return an empty collection instead (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00008)
 ```
 
 ## Naming and files
@@ -268,7 +274,7 @@ methods. Generated code is exempt.
 ```
 
 ```text
-Invoices/Invoice.cs(5,5): warning DT00009: Delete the #region — extract a type or a method instead of folding the code away
+Invoices/Invoice.cs(5,5): warning DT00009: Delete the #region — extract a type or a method instead of folding the code away (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00009)
 ```
 
 ### `DT00010`
@@ -289,7 +295,7 @@ contains the word `Not`, `No`, `Non`, `Cannot` or `Dont`. Words are matched whol
 ```
 
 ```text
-Bookings/Room.cs(5,17): warning DT00010: 'IsNotBookable' is a negative boolean — name the positive condition instead, so no caller has to read a double negative
+Bookings/Room.cs(5,17): warning DT00010: 'IsNotBookable' is a negative boolean — name the positive condition instead, so no caller has to read a double negative (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00010)
 ```
 
 ### `DT00011`
@@ -314,7 +320,7 @@ suggestion.
 ```
 
 ```text
-Orders/InvoiceMailer.cs(9,9): note DT00011: 'document' is read and then reassigned to an unrelated value — declare a new local named for what it now holds
+Orders/InvoiceMailer.cs(9,9): note DT00011: 'document' is read and then reassigned to an unrelated value — declare a new local named for what it now holds (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00011)
 ```
 
 ### `DT00012`
@@ -336,7 +342,7 @@ top-level statements, files with no type, and `file`-scoped types are skipped.
 ```
 
 ```text
-Invoices/Invoices.cs(3,21): warning DT00012: File 'Invoices.cs' declares 'Invoice' — rename the file to 'Invoice.cs' so a reader finds the type by its name
+Invoices/Invoices.cs(3,21): warning DT00012: File 'Invoices.cs' declares 'Invoice' — rename the file to 'Invoice.cs' so a reader finds the type by its name (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00012)
 ```
 
 ## One abstraction level
@@ -352,7 +358,7 @@ DI container, `TimeProvider`, `System.Threading` and `System.Diagnostics`. Calli
 framework it runs in; a repository that only touches its `DbContext` is not. None of the rules reads a framework,
 project or namespace name.
 
-Two `.editorconfig` keys set what counts, in a `[*.cs]` section:
+Three `.editorconfig` keys set what counts, in a `[*.cs]` section:
 
 | Key | Default | What it does |
 | --- | --- | --- |
@@ -398,7 +404,7 @@ in different members. This rule judges any method, not only orchestration.
 ```
 
 ```text
-Orders/SubmitOrderHandler.cs(10,13): warning DT00013: These 4 statements calling Reject, SaveAsync, SendAsync repeat 2 times in 'HandleAsync' — move them into one helper named for what they do
+Orders/SubmitOrderHandler.cs(10,13): warning DT00013: These 4 statements calling Reject, SaveAsync, SendAsync repeat 2 times in 'HandleAsync' — move them into one helper named for what they do (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00013)
 ```
 
 | Key | Default | What it does |
@@ -430,7 +436,7 @@ such as an EF projection, and index initialisers (`["key"] = value`).
 ```
 
 ```text
-Orders/PlaceOrderHandler.cs(7,21): warning DT00014: 'Order' is built inline with 5 members between other steps — move the construction into a factory or extension method
+Orders/PlaceOrderHandler.cs(7,21): warning DT00014: 'Order' is built inline with 5 members between other steps — move the construction into a factory or extension method (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00014)
 ```
 
 `ToOrder` is an extension method holding the same initialiser. It calls no collaborators, so it isn't judged.
@@ -469,7 +475,7 @@ count branches, and a straight-line handler of 40 statements passes them.
 ```
 
 ```text
-Orders/CheckoutHandler.cs(5,29): warning DT00015: 'HandleAsync' calls several collaborators and holds 24 statements (16 top-level), over the limit of 20 — move step detail into named helpers so the method reads as its steps
+Orders/CheckoutHandler.cs(5,29): warning DT00015: 'HandleAsync' calls several collaborators and holds 24 statements (16 top-level), over the limit of 20 — move step detail into named helpers so the method reads as its steps (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00015)
 ```
 
 The `⋮` lines stand for statements left out of the diff; the method that was built had all 24.
@@ -500,7 +506,7 @@ parameter; a local the same block created with `new`; and the method's own insta
 ```
 
 ```text
-Orders/CancelOrderHandler.cs(8,9): warning DT00016: 3 members of 'order' are set in a row inside a larger method — name the change as a method on Order or a helper
+Orders/CancelOrderHandler.cs(8,9): warning DT00016: 3 members of 'order' are set in a row inside a larger method — name the change as a method on Order or a helper (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00016)
 ```
 
 | Key | Default | What it does |
@@ -531,7 +537,7 @@ step to one line. The rule looks for a local set from a call, followed by an `if
 ```
 
 ```text
-Orders/PayOrderHandler.cs(9,9): warning DT00017: 'payment' is checked and thrown on inline between other steps — move the call and its check into a helper that returns the value
+Orders/PayOrderHandler.cs(9,9): warning DT00017: 'payment' is checked and thrown on inline between other steps — move the call and its check into a helper that returns the value (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00017)
 ```
 
 `CapturePaymentAsync` holds the call and the check. It calls one collaborator, so it isn't an orchestration method.
@@ -561,7 +567,7 @@ helper. A type that holds a client of an area itself, as a field or constructor 
 ```
 
 ```text
-Orders/ExportOrdersHandler.cs(8,15): warning DT00018: 'HandleAsync' coordinates other calls and also uses File (System.IO) directly — move that call into a named helper or an adapter class
+Orders/ExportOrdersHandler.cs(8,15): warning DT00018: 'HandleAsync' coordinates other calls and also uses File (System.IO) directly — move that call into a named helper or an adapter class (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00018)
 ```
 
 | Key | Default | What it does |
@@ -600,7 +606,7 @@ the composition root, `FakeTimeProvider` in tests.
 ```
 
 ```text
-Bookings/BookingRules.cs(5,75): warning RS0030: The symbol 'DateTimeOffset.UtcNow' is banned in this project: Inject TimeProvider and use GetUtcNow() (https://github.com/dotnet/roslyn-analyzers/blob/main/src/Microsoft.CodeAnalysis.BannedApiAnalyzers/BannedApiAnalyzers.Help.md)
+Bookings/BookingRules.cs(5,75): warning RS0030: The symbol 'DateTimeOffset.UtcNow' is banned in this project: Inject TimeProvider and use GetUtcNow() (https://github.com/dotnet/roslyn/blob/main/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/BannedApiAnalyzers.Help.md)
 ```
 
 ### `RS0030` millisecond overloads
@@ -626,7 +632,7 @@ overloads are banned; every `TimeSpan` twin stays allowed.
 ```
 
 ```text
-Orders/PaymentPoller.cs(6,9): warning RS0030: The symbol 'Task.Delay(int, CancellationToken)' is banned in this project: Pass a TimeSpan: Task.Delay(TimeSpan.FromSeconds(5), cancellationToken) (https://github.com/dotnet/roslyn-analyzers/blob/main/src/Microsoft.CodeAnalysis.BannedApiAnalyzers/BannedApiAnalyzers.Help.md)
+Orders/PaymentPoller.cs(6,9): warning RS0030: The symbol 'Task.Delay(int, CancellationToken)' is banned in this project: Pass a TimeSpan: Task.Delay(TimeSpan.FromSeconds(5), cancellationToken) (https://github.com/dotnet/roslyn/blob/main/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/BannedApiAnalyzers.Help.md)
 ```
 
 ### `RS0030` raw SQL
@@ -656,7 +662,7 @@ a `Raw` method, but not one concatenated or built in another method, which is th
 ```
 
 ```text
-Orders/OrderSearch.cs(19,3): warning RS0030: The symbol 'RelationalQueryableExtensions.FromSqlRaw<TEntity>(DbSet<TEntity>, string, params object?[])' is banned in this project: Use FromSql($"... {value}"), which sends each interpolated value as a parameter (https://github.com/dotnet/roslyn/blob/main/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/BannedApiAnalyzers.Help.md)
+Orders/OrderSearch.cs(6,9): warning RS0030: The symbol 'RelationalQueryableExtensions.FromSqlRaw<TEntity>(DbSet<TEntity>, string, params object?[])' is banned in this project: Use FromSql($"... {value}"), which sends each interpolated value as a parameter (https://github.com/dotnet/roslyn/blob/main/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/BannedApiAnalyzers.Help.md)
 ```
 
 A table or column name can't be a parameter. Code that really needs one, such as a migration tool copying tables by
@@ -727,7 +733,7 @@ argument with nothing to escape. Only the one-string overloads are banned.
 ```
 
 ```text
-Invoices/InvoicePrinter.cs(8,48): warning RS0030: The symbol 'ProcessStartInfo.Arguments' is banned in this project: Add each argument to ArgumentList, which passes it as exactly one argument (https://github.com/dotnet/roslyn/blob/main/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/BannedApiAnalyzers.Help.md)
+Invoices/InvoicePrinter.cs(6,54): warning RS0030: The symbol 'ProcessStartInfo.Arguments' is banned in this project: Add each argument to ArgumentList, which passes it as exactly one argument (https://github.com/dotnet/roslyn/blob/main/src/RoslynAnalyzers/Microsoft.CodeAnalysis.BannedApiAnalyzers/BannedApiAnalyzers.Help.md)
 ```
 
 ## Build checks
@@ -753,12 +759,12 @@ not checked. Test frameworks, assertion and mocking libraries are banned by Digi
 
 ```diff
   <ItemGroup>
--   <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+-   <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
 ```
 
 ```text
-digitals.analyzers/0.11.0/build/Digitals.Analyzers.targets(174,3): error DIGB001: Banned package(s) referenced: Newtonsoft.Json — use System.Text.Json. Legitimate exception? Set <DigitalsAllowBannedPackages>Newtonsoft.Json</DigitalsAllowBannedPackages> with a comment explaining why.
+digitals.analyzers/0.12.0/build/Digitals.Analyzers.targets(174,3): error DIGB001: Banned package(s) referenced: Newtonsoft.Json — use System.Text.Json. Legitimate exception? Set <DigitalsAllowBannedPackages>Newtonsoft.Json</DigitalsAllowBannedPackages> with a comment explaining why.
 ```
 
 ### `DIGB002`
@@ -776,14 +782,15 @@ nothing to work with. It is an error, not a warning, so it fails the build even 
 ```
 
 ```text
-digitals.analyzers/0.11.0/build/Digitals.Analyzers.targets(117,3): error DIGB002: <Nullable> is 'disable' — the org policy requires 'enable' (Directory.Build.props). Migrating a legacy project? Set <DigitalsAllowNullableDisabled>true</DigitalsAllowNullableDisabled> with a comment explaining why.
+digitals.analyzers/0.12.0/build/Digitals.Analyzers.targets(117,3): error DIGB002: <Nullable> is 'disable' — the org policy requires 'enable' (Directory.Build.props). Migrating a legacy project? Set <DigitalsAllowNullableDisabled>true</DigitalsAllowNullableDisabled> with a comment explaining why.
 ```
 
 ### `DIGB003`
 
 <img alt="Every project" src="https://img.shields.io/badge/applies-Every_project-0969da"> <img alt="From Digitals" src="https://img.shields.io/badge/from-Digitals-1a7f37">
 
-`TreatWarningsAsErrors` is `true`. Every rule on this page ships as a warning, so without it none of them fails a build.
+`TreatWarningsAsErrors` is `true`. Every `DT` rule and `RS0030` ships as a warning or a suggestion, so without it none
+of them fails a build.
 It is an error for the same reason: a warning about warnings would be ignored too. When both properties are wrong, the
 build reports `DIGB002` and `DIGB003` together.
 
@@ -795,7 +802,7 @@ build reports `DIGB002` and `DIGB003` together.
 ```
 
 ```text
-digitals.analyzers/0.11.0/build/Digitals.Analyzers.targets(119,3): error DIGB003: <TreatWarningsAsErrors> is '' — the org policy requires 'true' (Directory.Build.props), or the packaged analyzer severities never gate a build. Migrating a legacy project? Set <DigitalsAllowWarningsNotAsErrors>true</DigitalsAllowWarningsNotAsErrors> with a comment explaining why.
+digitals.analyzers/0.12.0/build/Digitals.Analyzers.targets(119,3): error DIGB003: <TreatWarningsAsErrors> is '' — the org policy requires 'true' (Directory.Build.props), or the packaged analyzer severities never gate a build. Migrating a legacy project? Set <DigitalsAllowWarningsNotAsErrors>true</DigitalsAllowWarningsNotAsErrors> with a comment explaining why.
 ```
 
 ### `DIGB004`
@@ -817,13 +824,13 @@ from `net10.0`, so a project on an older target sets it in `Directory.Build.prop
 ```
 
 ```text
-digitals.analyzers/0.11.0/build/Digitals.Analyzers.targets(161,3): error DIGB004: <NuGetAuditLevel> is 'moderate', so advisories below it go unreported. The org policy requires 'low'. Legitimate exception? Suppress the one advisory with <NuGetAuditSuppress Include="<advisory URL>" />, or set <DigitalsAllowWeakNuGetAudit>true</DigitalsAllowWeakNuGetAudit> with a comment explaining why.
+digitals.analyzers/0.12.0/build/Digitals.Analyzers.targets(161,3): error DIGB004: <NuGetAuditLevel> is 'moderate', so advisories below it go unreported. The org policy requires 'low'. Legitimate exception? Suppress the one advisory with <NuGetAuditSuppress Include="<advisory URL>" />, or set <DigitalsAllowWeakNuGetAudit>true</DigitalsAllowWeakNuGetAudit> with a comment explaining why.
 ```
 
 > **Note:** Silencing a code reports this instead:
 >
 > ```text
-> digitals.analyzers/0.11.0/build/Digitals.Analyzers.targets(163,3): error DIGB004: Vulnerability warning(s) NU1903 are in NoWarn or WarningsNotAsErrors, so a vulnerable package no longer fails the build. Legitimate exception? Suppress the one advisory with <NuGetAuditSuppress Include="<advisory URL>" />, or set <DigitalsAllowWeakNuGetAudit>true</DigitalsAllowWeakNuGetAudit> with a comment explaining why.
+> digitals.analyzers/0.12.0/build/Digitals.Analyzers.targets(163,3): error DIGB004: Vulnerability warning(s) NU1903 are in NoWarn or WarningsNotAsErrors, so a vulnerable package no longer fails the build. Legitimate exception? Suppress the one advisory with <NuGetAuditSuppress Include="<advisory URL>" />, or set <DigitalsAllowWeakNuGetAudit>true</DigitalsAllowWeakNuGetAudit> with a comment explaining why.
 > ```
 >
 > To accept one known advisory, suppress just that one: `<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-…" />`.
@@ -836,7 +843,7 @@ decides how hard that bites with `TreatWarningsAsErrors`, which `DIGB003` requir
 a SARIF log, and never fails a build. The file also sets the code-style options (`var` everywhere, braces always,
 file-scoped namespaces, Allman braces, the naming rules) that `EnforceCodeStyleInBuild` turns into `IDE` warnings.
 
-Raised to `warning`, from off or info:
+Set to `warning`, raised from off or info, or pinned there so a vendor release can't lower it:
 
 - Complexity and size: `S3776` cognitive complexity over 15, `S1541` cyclomatic complexity over 15, `S134` control flow nested more than 3 deep, `S104` a file over 1000 lines. Files under a `Migrations/` folder are exempt from `S104`.
 - Correctness: `CA1851` an `IEnumerable` enumerated more than once, `CA1310` a culture-dependent string comparison, `CA1069` two enum members with one value, `CA2248` `Enum.HasFlag` with another enum's member, `RCS1157` a `[Flags]` composite covering an undefined bit, `IDE0072` and `IDE0010` a `switch` over an enum that doesn't name every member even with a default arm, `CS8509`, `CA2016`, `CA2200`, `CA1806`, `S2692` an `IndexOf` result tested with `> 0`, `S3249` `base.GetHashCode` or `base.Equals` in a class that derives straight from `object`.
@@ -874,8 +881,8 @@ The `DT` rules are warnings too, apart from `DT00006` and `DT00011`, which are s
 
 ## Retired IDs
 
-`DT00005` checked test method names. It moved to Digitals.Testing in 0.7.0, which reaches test projects only, and is now
-`DT10001` there; see [testing.md](testing.md). The ID is not reused.
+`DT00005` checked test method names. Digitals.Analyzers dropped it in 0.7.0, since the rule means nothing outside a
+test project, and Digitals.Testing has it as `DT10001`; see [testing.md](testing.md). The ID is not reused.
 
 ## Change a rule for one repo
 
@@ -931,8 +938,8 @@ rule: copy across the `S1541` entry from the package's file if you still want 15
 </ItemGroup>
 ```
 
-The build checks each have a property that switches them off for a project. Set it next to a comment saying which
-campaign removes it:
+The build checks each have a property that switches them off for a project. Set it next to a comment saying why, and
+what will let you remove it:
 
 | Property | Switches off |
 | --- | --- |

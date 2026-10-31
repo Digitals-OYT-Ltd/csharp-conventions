@@ -1,14 +1,14 @@
-# Banned in production code only, enforced by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030).
-# Format: <doc-comment-id>;<message shown in the diagnostic>
-#
-# These are the calls where a string from outside becomes code: SQL text, HTML markup, or a
-# process command line. Each has a twin that takes the outside value as data instead, so the ban costs one edit
-# per call site. Digitals.Testing drops this file from test projects, which run fixed cleanup
-# and schema SQL with table names built at runtime; that is why it is not in BannedSymbols.txt.
+// Banned in production code only, enforced by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030).
+// Format: <doc-comment-id>;<message shown in the diagnostic>
+//
+// These are the calls where a string from outside becomes code: SQL text, HTML markup, or a
+// process command line. Each has a twin that takes the outside value as data instead, so the ban costs one edit
+// per call site. Digitals.Testing drops this file from test projects, which run fixed cleanup
+// and schema SQL with table names built at runtime; that is why it is not in BannedSymbols.txt.
 
-# Raw EF Core SQL. The FormattableString twins send every interpolated value as a DbParameter.
-# EF1002 already flags an interpolated string passed straight to these; it can't see a string
-# concatenated or built in another method, which is the case this ban closes.
+// Raw EF Core SQL. The FormattableString twins send every interpolated value as a DbParameter.
+// EF1002 already flags an interpolated string passed straight to these; it can't see a string
+// concatenated or built in another method, which is the case this ban closes.
 M:Microsoft.EntityFrameworkCore.RelationalQueryableExtensions.FromSqlRaw``1(Microsoft.EntityFrameworkCore.DbSet{``0},System.String,System.Object[]);Use FromSql($"... {value}"), which sends each interpolated value as a parameter
 M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade,System.String,System.Object[]);Use ExecuteSql($"... {value}"), which sends each interpolated value as a parameter
 M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade,System.String,System.Collections.Generic.IEnumerable{System.Object});Use ExecuteSql($"... {value}"), which sends each interpolated value as a parameter
@@ -17,10 +17,10 @@ M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRaw
 M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRawAsync(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade,System.String,System.Collections.Generic.IEnumerable{System.Object},System.Threading.CancellationToken);Use ExecuteSqlAsync($"... {value}"), which sends each interpolated value as a parameter
 M:Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.SqlQueryRaw``1(Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade,System.String,System.Object[]);Use SqlQuery<T>($"... {value}"), which sends each interpolated value as a parameter
 
-# Raw HTML. Razor encodes every @value; these write the string out as markup instead, so any
-# user text that reaches them is script in the page. CA3002 doesn't follow data into Razor.
-# IHtmlHelper<TModel> redeclares Raw with 'new', and every view's Html is that type, so the
-# generic entries are the ones a .cshtml hits; the non-generic ones only catch C# callers.
+// Raw HTML. Razor encodes every @value; these write the string out as markup instead, so any
+// user text that reaches them is script in the page. CA3002 doesn't follow data into Razor.
+// IHtmlHelper<TModel> redeclares Raw with 'new', and every view's Html is that type, so the
+// generic entries are the ones a .cshtml hits; the non-generic ones only catch C# callers.
 M:Microsoft.AspNetCore.Mvc.Rendering.IHtmlHelper`1.Raw(System.String);Write @value and let Razor encode it; build trusted markup with TagBuilder
 M:Microsoft.AspNetCore.Mvc.Rendering.IHtmlHelper`1.Raw(System.Object);Write @value and let Razor encode it; build trusted markup with TagBuilder
 M:Microsoft.AspNetCore.Mvc.Rendering.IHtmlHelper.Raw(System.String);Write @value and let Razor encode it; build trusted markup with TagBuilder
@@ -31,9 +31,9 @@ M:Microsoft.AspNetCore.Html.HtmlString.#ctor(System.String);Return IHtmlContent 
 M:Microsoft.AspNetCore.Components.MarkupString.#ctor(System.String);Render the value as text and let Blazor encode it
 M:Microsoft.AspNetCore.Components.MarkupString.op_Explicit(System.String)~Microsoft.AspNetCore.Components.MarkupString;Render the value as text and let Blazor encode it
 
-# A command line as one string. The child process splits it back into arguments, so a value with
-# a quote or a space in it becomes extra arguments. ArgumentList passes each value as exactly one.
-# Only the overloads that take that one string are listed; the IEnumerable<string> twins stay allowed.
+// A command line as one string. The child process splits it back into arguments, so a value with
+// a quote or a space in it becomes extra arguments. ArgumentList passes each value as exactly one.
+// Only the overloads that take that one string are listed; the IEnumerable<string> twins stay allowed.
 P:System.Diagnostics.ProcessStartInfo.Arguments;Add each argument to ArgumentList, which passes it as exactly one argument
 M:System.Diagnostics.ProcessStartInfo.#ctor(System.String,System.String);Use new ProcessStartInfo(fileName, [arg1, arg2]), which passes each as exactly one argument
 M:System.Diagnostics.Process.Start(System.String,System.String);Use Process.Start(fileName, [arg1, arg2]), which passes each as exactly one argument

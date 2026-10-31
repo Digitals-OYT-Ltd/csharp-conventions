@@ -33,10 +33,10 @@
 
 Every Digitals .NET repo builds with the same analyzers, the same severities and the same test stack. These two packages carry them, so a repo references a package instead of wiring up eleven analyzer and test packages and copying an `.editorconfig` around.
 
-- **Nothing to import.** Each package ships `build/` files that NuGet loads into the project on restore: the severity policy, the banned APIs, the build checks, the coverage settings.
-- **One version to review.** Every bundled analyzer and test package is pinned inside. An upgrade is one version bump and one changelog, in every repo at once.
-- **Warnings, not errors.** Every rule ships as `warning`, and the repo's `TreatWarningsAsErrors` decides how hard it bites. The package checks that it is on.
-- **Production and tests apart.** Test projects get a looser policy where the production rules fight the way tests are written, and nothing about tests reaches production code.
+- Nothing to import. Each package ships `build/` files that NuGet loads into the project on restore: the severity policy, the banned APIs, the build checks, the coverage settings.
+- One version to review. Every bundled analyzer and test package is pinned inside. An upgrade is one version bump and one changelog, in every repo at once.
+- Warnings, not errors. Every rule ships as a warning or a suggestion, and the repo's `TreatWarningsAsErrors` decides how hard it bites. The package checks that it is on.
+- Production and tests apart. Test projects get a looser policy where the production rules fight the way tests are written, and nothing about tests reaches production code.
 
 ## Quick start
 
@@ -74,6 +74,9 @@ Select the Microsoft.Testing.Platform runner in `global.json`:
 }
 ```
 
+Neither reference has a `Version`: both assume central package management, with the versions in
+`Directory.Packages.props`. Without it, add `Version` to each reference.
+
 Then `dotnet build` runs every rule and `dotnet test` collects coverage and judges it. Moving an existing repo over, including how to stage the first wave of findings: [Digitals.Analyzers](docs/adoption/analyzers.md) and [Digitals.Testing](docs/adoption/testing.md).
 
 ## The packages
@@ -84,7 +87,7 @@ Then `dotnet build` runs every rule and `dotnet test` collects coverage and judg
 | Covers | Every project | Test projects only |
 | Bundles | SonarAnalyzer.CSharp, Roslynator, VS Threading analyzers, BannedApiAnalyzers | xunit.v3, NSubstitute, FakeTimeProvider, Microsoft's coverage engine, the TRX reporter |
 | Severity policy | `global_level 100` | `global_level 300`, relaxing what fights tests |
-| Banned | The ambient clock, `int` millisecond delays, `Newtonsoft.Json`, AutoMapper, EF6 | The VSTest stack, Moq, FluentAssertions, xUnit v2, NUnit, MSTest |
+| Banned | The ambient clock and `int` millisecond delays everywhere; raw SQL, raw HTML and one-string process arguments in production code; `Newtonsoft.Json`, AutoMapper, EF6, `System.Data.SqlClient` | The VSTest stack, Moq, FluentAssertions, xUnit v2, NUnit, MSTest |
 | Own rules | `DT0####`: time types, `HttpClient`, naming, one abstraction level per method | `DT1####`: test names, category traits, wall-clock waits, tests without an assertion |
 | Build checks | `DIGB001` to `DIGB004` | `DIGT001`, `DIGT002` |
 | Gates | | Coverage floors, CRAP limit, complexity cap |
@@ -170,7 +173,7 @@ You need the .NET 10 SDK, [just](https://github.com/casey/just) and PowerShell 7
 | Command | What it does |
 | --- | --- |
 | `just test [package]` | Every test project, or one package's: `just test Analyzers` |
-| `just format-check` | The formatting gate CI runs; `just format` fixes it |
+| `just format-check` | The formatting check; CI runs the same check, scoped to the package. `just format` fixes it |
 | `just pack [package]` | Every package into `artifacts/`, or one: `just pack Testing` |
 | `just check-ledger [package]` | Fails while an `AnalyzerReleases.Unshipped.md` still lists a rule |
 | `just clean` | Removes every `bin/`, `obj/`, `artifacts/` and `TestResults/` |
@@ -183,7 +186,7 @@ src/Digitals.Analyzers.CSharp/    the DT0#### rules, packed into Digitals.Analyz
 src/Digitals.Testing/             the package: the test stack and build/, the test policy, the coverage settings, the DIGT checks
 src/Digitals.Testing.CSharp/      the DT1#### rules, packed into Digitals.Testing
 src/Digitals.Testing.Coverage/    the coverage gate, a Microsoft.Testing.Platform extension
-tests/                            one test project per rule or gate assembly
+tests/                            one test project per assembly: the two rule sets and the coverage gate
 docs/rules/                       every rule explained, one page per package
 docs/adoption/                    moving an existing repo onto each package
 ```
@@ -193,7 +196,7 @@ docs/adoption/                    moving an existing repo onto each package
 Each package releases on its own tag. Its workflow in `.github/workflows/` tests it, checks its release ledger, packs it, pushes it to nuget.org through Trusted Publishing and creates a GitHub Release.
 
 ```bash
-git tag analyzers/v0.12.0 && git push origin analyzers/v0.12.0    # or testing/v*
+git tag analyzers/vX.Y.Z && git push origin analyzers/vX.Y.Z    # or testing/vX.Y.Z
 ```
 
 Before tagging, move the package's new rules from `AnalyzerReleases.Unshipped.md` to `Shipped.md` under the version heading. MinVer versions each package from its own tags only. A bump of any bundled package is at least a minor release.

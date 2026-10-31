@@ -37,6 +37,7 @@ public sealed class RepeatedStepSequenceAnalyzer : DiagnosticAnalyzer
         category: "Digitals.Design",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00013",
         description: "The same run of calls, matched on receiver and member with arguments ignored, appears more than"
             + " once in one member. It is a protocol copied by hand, and the copies drift when a step is added to one"
             + " and not the others. Tune it with digitals_repeated_sequence_length (statements per run, default 3) and"

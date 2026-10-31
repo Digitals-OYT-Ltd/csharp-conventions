@@ -16,8 +16,8 @@
 		<IsTestProject Condition="'$(IsTestProject)' == ''">true</IsTestProject>
 		<IsPackable Condition="'$(IsPackable)' == ''">false</IsPackable>
 
-		<!-- Coverage floors. Override per project, next to a comment saying which campaign raises
-		     them back. Ratchet: when real coverage climbs, raise these; never lower them. -->
+		<!-- Coverage floors. Override per project, next to a comment saying what raises them
+		     back. Ratchet: when real coverage climbs, raise these; never lower them. -->
 		<DigitalsMinLineCoverage Condition="'$(DigitalsMinLineCoverage)' == ''">100</DigitalsMinLineCoverage>
 		<DigitalsMinBranchCoverage Condition="'$(DigitalsMinBranchCoverage)' == ''">100</DigitalsMinBranchCoverage>
 		<DigitalsSkipCoverageGate Condition="'$(DigitalsSkipCoverageGate)' == ''">false</DigitalsSkipCoverageGate>

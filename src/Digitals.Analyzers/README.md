@@ -17,14 +17,14 @@ Reference it once, in `Directory.Build.props`, and remove any direct reference t
 </ItemGroup>
 ```
 
-Without `EnforceCodeStyleInBuild` the `IDE` rules stay in the editor, and without `GenerateDocumentationFile` the build never reports an unused `using`. On a target older than `net10.0`, also set `<NuGetAuditMode>all</NuGetAuditMode>`.
+Without `EnforceCodeStyleInBuild` the `IDE` rules stay in the editor, and without `GenerateDocumentationFile` the build never reports an unused `using`. On a target older than `net10.0`, also set `<NuGetAuditMode>all</NuGetAuditMode>`. The reference has no `Version` because it assumes central package management, with the version in `Directory.Packages.props`; without it, add `Version` with the latest from this page.
 
 | What | Does |
 | --- | --- |
-| Severity policy | A global AnalyzerConfig at `global_level 100`. Every rule it turns on is a `warning`, so `TreatWarningsAsErrors` decides how hard it bites. |
-| Banned APIs (`RS0030`) | The ambient clock (`DateTime.Now`, `DateTimeOffset.UtcNow`, ...): inject `TimeProvider`. The `int` millisecond overloads of `Task.Delay`, `Thread.Sleep` and `CancelAfter`: pass a `TimeSpan`. In production code only, EF Core's `FromSqlRaw` family (use `FromSql($"...")`), `Html.Raw`, `HtmlString` and `MarkupString` (let Razor encode), and process arguments as one string (use `ArgumentList`). |
+| Severity policy | A global AnalyzerConfig at `global_level 100`. Every rule it turns on is a `warning` or a `suggestion`, never an `error`, so `TreatWarningsAsErrors` decides how hard it bites. |
+| Banned APIs (`RS0030`) | The ambient clock (`DateTime.Now`, `DateTimeOffset.UtcNow`, ...): inject `TimeProvider`. The `int` millisecond overloads of `Task.Delay`, `Thread.Sleep`, `new CancellationTokenSource` and `CancelAfter`: pass a `TimeSpan`. In production code only, EF Core's `FromSqlRaw` family (use `FromSql($"...")`), `Html.Raw`, `HtmlString` and `MarkupString` (let Razor encode), and process arguments as one string (use `ArgumentList`). |
 | Taint analysis | The SDK's `CA3001`-`CA3012`, shipped off, raised to `warning`: a request value that reaches SQL, a file path, a process start or another injection sink unchecked, followed across methods and classes. |
-| `DT0####` rules | Time types, `new HttpClient()`, `dynamic`, nullable collections, `#region`, negative boolean names, file names, and six rules that keep each method at one level of abstraction. |
+| `DT0####` rules | Time types, `new HttpClient()`, `dynamic`, money held as `double`, nullable collections, `#region`, negative boolean names, a local reused for an unrelated value, file names, and six rules that keep each method at one level of abstraction. |
 | `DIGB001` | Fails the build on a direct reference to `Newtonsoft.Json`, AutoMapper, EF6, `System.Data.SqlClient` or EF Core lazy-loading proxies. |
 | `DIGB002`, `DIGB003` | Fail the build when `Nullable` isn't `enable` or `TreatWarningsAsErrors` isn't `true`, since without them the policy is advisory. |
 | `DIGB004` | Warns, and under `TreatWarningsAsErrors` fails, when the NuGet vulnerability audit is weakened. |

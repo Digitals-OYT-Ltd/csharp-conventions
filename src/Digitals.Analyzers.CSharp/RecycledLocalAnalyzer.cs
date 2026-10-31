@@ -31,7 +31,8 @@ public sealed class RecycledLocalAnalyzer : DiagnosticAnalyzer
         messageFormat: "'{0}' is read and then reassigned to an unrelated value — declare a new local named for what it now holds",
         category: "Digitals.Naming",
         defaultSeverity: DiagnosticSeverity.Info,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00011");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

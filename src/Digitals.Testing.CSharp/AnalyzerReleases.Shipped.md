@@ -1,5 +1,6 @@
 ; Shipped analyzer releases (RS2008 release tracking).
 ; New rules land in AnalyzerReleases.Unshipped.md and move here when a version ships.
+; DT10002 is skipped: never allocate it.
 
 ## Release 0.3.0
 

@@ -27,7 +27,8 @@ public sealed class FileNameTypeNameAnalyzer : DiagnosticAnalyzer
         messageFormat: "File '{0}' declares '{1}' — rename the file to '{1}.cs' so a reader finds the type by its name",
         category: "Digitals.Style",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00012");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

@@ -21,7 +21,8 @@ public sealed class DynamicTypeAnalyzer : DiagnosticAnalyzer
         messageFormat: "Resolve types at compile time — generics, DI, or a typed model instead of dynamic",
         category: "Digitals.Types",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00004");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

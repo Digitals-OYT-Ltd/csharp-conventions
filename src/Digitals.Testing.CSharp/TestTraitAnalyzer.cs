@@ -34,7 +34,7 @@ public sealed class TestTraitAnalyzer : DiagnosticAnalyzer
         category: "Digitals.Testing",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/engineering-standards/blob/main/docs/standards/testing/csharp/index.md");
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/testing.md#dt10003");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

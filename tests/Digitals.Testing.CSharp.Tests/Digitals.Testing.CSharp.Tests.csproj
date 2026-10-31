@@ -21,4 +21,9 @@
 		<ProjectReference Include="..\..\src\Digitals.Testing.CSharp\Digitals.Testing.CSharp.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<!-- The page each DT rule's help link opens. -->
+		<EmbeddedResource Include="..\..\docs\rules\testing.md" LogicalName="rules.md" Link="docs\testing.md" />
+	</ItemGroup>
+
 </Project>

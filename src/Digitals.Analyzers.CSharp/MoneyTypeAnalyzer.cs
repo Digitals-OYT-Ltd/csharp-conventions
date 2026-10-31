@@ -23,7 +23,8 @@ public sealed class MoneyTypeAnalyzer : DiagnosticAnalyzer
         messageFormat: "'{0}' looks like a money value held as {1} — binary floating point loses cents; use decimal",
         category: "Digitals.Types",
         defaultSeverity: DiagnosticSeverity.Info,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00006");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

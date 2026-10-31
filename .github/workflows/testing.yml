@@ -27,6 +27,7 @@ on:
       - docs/rules/testing.md
       - Directory.Build.props
       - Directory.Packages.props
+      - Digitals.CSharp.Conventions.slnx
       - icon.png
       - global.json
       - nuget.config

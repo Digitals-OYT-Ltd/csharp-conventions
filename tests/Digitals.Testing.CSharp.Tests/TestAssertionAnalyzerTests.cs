@@ -8,6 +8,7 @@ using Verify = Microsoft.CodeAnalysis.CSharp.Testing.CSharpAnalyzerTest<
 
 namespace Digitals.Testing.CSharp.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class TestAssertionAnalyzerTests
 {
     // Stand-ins for the real assertion APIs, declared under their real namespaces and type names,

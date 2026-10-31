@@ -1,15 +1,12 @@
 root = true
 
 # ============================================================================
-# MASTER COPY — docs repo: templates/dotnet/.editorconfig
-# Canonical C#/.NET editor behaviour for all repos. Don't edit local copies —
-# edit the master here, re-sync to siblings. Source of truth, not per-repo.
+# The Digitals .editorconfig for .NET repos
 #
 # ANALYZER SEVERITIES ARE NOT HERE. They ship inside the Digitals.Analyzers
 # package as a global AnalyzerConfig at global_level 100, so a rule change is a
 # PR against that package and reaches every repo on the next version bump:
-#   https://github.com/Digitals-OYT-Ltd/csharp-analyzers#readme
-# Owning standard: docs/standards/coding/csharp/code-style.md#use-digitals-analyzers
+#   https://github.com/Digitals-OYT-Ltd/csharp-conventions
 #
 # What must still live in THIS file, because a global config can't hold it:
 #   - editor-core keys (charset, end_of_line, indent_style, ...) — they are only
@@ -45,17 +42,15 @@ max_line_length = 120
 
 # ============================================================================
 # SCOPED OVERRIDES — path sections, which a global AnalyzerConfig cannot express.
-# Test-project relaxations are NOT here: the package injects them per project
-# name (a project ending in .Tests) via its own Tests globalconfig.
+# Test-project relaxations are NOT here: Digitals.Testing ships them in its own
+# globalconfig, to every project that references it.
 # ============================================================================
 
 # Razor page models use _Step{N}_{Name} naming — S101 / IDE1006 flag underscores;
-# handler params mirror query-string casing (UserId, CTNumber, ...) — also IDE1006
+# handler parameters mirror query-string casing, also IDE1006
 [**/Pages/**.cshtml.cs]
 dotnet_diagnostic.S101.severity = none
 dotnet_diagnostic.IDE1006.severity = none
-
-# test projects — suppress rules that don't fit xUnit / NSubstitute
 
 # EF Core migrations generated — exempt from analyzer rules (don't hand-edit generated code)
 [**/Migrations/**.cs]

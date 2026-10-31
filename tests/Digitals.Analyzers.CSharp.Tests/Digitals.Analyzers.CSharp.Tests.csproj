@@ -33,6 +33,9 @@
 		<AssemblyMetadata Include="VendorAnalyzerPackages" Value="$(PkgSonarAnalyzer_CSharp);$(PkgRoslynator_Analyzers);$(PkgRoslynator_Formatting_Analyzers);$(PkgMicrosoft_VisualStudio_Threading_Analyzers);$(PkgMicrosoft_CodeAnalysis_BannedApiAnalyzers)" />
 		<!-- The policy under test, embedded so the tests read no file at run time. -->
 		<EmbeddedResource Include="..\..\src\Digitals.Analyzers\build\config\Digitals.Analyzers.globalconfig" LogicalName="Digitals.Analyzers.globalconfig" Link="config\Digitals.Analyzers.globalconfig" />
+		<EmbeddedResource Include="..\..\src\Digitals.Analyzers\build\config\BannedSymbols*.txt" LogicalName="%(Filename)%(Extension)" Link="config\%(Filename)%(Extension)" />
+		<!-- The page each DT rule's help link opens. -->
+		<EmbeddedResource Include="..\..\docs\rules\analyzers.md" LogicalName="rules.md" Link="docs\analyzers.md" />
 	</ItemGroup>
 
 	<!--

@@ -13,6 +13,7 @@ namespace Digitals.Analyzers.CSharp.Tests;
 /// is that it no longer passes. The ✅ is the same use case as a recipe of named steps, helpers
 /// included, and must stay silent.
 /// </summary>
+[Trait("Category", "Unit")]
 public sealed class AbstractionLevelFixtureTests
 {
     private const string Stubs = """

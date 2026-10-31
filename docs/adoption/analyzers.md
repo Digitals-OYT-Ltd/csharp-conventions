@@ -1,39 +1,95 @@
 # Adopting Digitals.Analyzers
 
-Guide for adding the `Digitals.Analyzers` meta-package to a repo. Written for an agent doing the migration.
+How to add the `Digitals.Analyzers` package to a repo and work through what its first build reports.
 
-Production code only. Test projects move separately onto Digitals.Testing ([its guide](testing.md)), which carries the test severity policy, the test-package bans and the coverage gate.
+The package covers production code and reaches test projects too. Test projects also move onto Digitals.Testing, which
+has [its own guide](testing.md): it carries the test severity policy, the test package bans and the coverage gate.
 
 ## What the package does
 
-One NuGet package that brings SonarAnalyzer.CSharp, Roslynator (Analyzers + Formatting), VisualStudio.Threading.Analyzers, BannedApiAnalyzers, and the custom `Digitals.Analyzers.CSharp` rules. At build it injects:
+One NuGet package brings SonarAnalyzer.CSharp, Roslynator (analyzers and formatting), the Visual Studio threading
+analyzers, Microsoft's banned API analyzer, and the Digitals rules. At build it adds:
 
-- `Digitals.Analyzers.globalconfig` — org style + severity policy (global_level 100)
-- `BannedSymbols.txt` — RS0030 clock ban: `DateTime.Now/UtcNow/Today`, `DateTimeOffset.Now/UtcNow` → use injected `TimeProvider`
-- `BannedSymbols.Production.txt` — RS0030 in production code only: `FromSqlRaw`/`ExecuteSqlRaw`/`SqlQueryRaw` → `FromSql($"...")`/`ExecuteSql`/`SqlQuery`; `Html.Raw`/`HtmlString`/`MarkupString` → `@value`; `ProcessStartInfo.Arguments` and the one-string `Process.Start` overloads → `ArgumentList`. Digitals.Testing drops it from test projects
+- `Digitals.Analyzers.globalconfig`, the code style and severity policy, at `global_level 100`.
+- `BannedSymbols.txt`, reported as `RS0030` in every project. It bans reading the clock directly (`DateTime.Now`,
+  `UtcNow` and `Today`, `DateTimeOffset.Now` and `UtcNow`; inject `TimeProvider`), and the millisecond `int` overloads
+  of `Task.Delay`, `Thread.Sleep`, `new CancellationTokenSource` and `CancelAfter` (pass a `TimeSpan`).
+- `BannedSymbols.Production.txt`, reported as `RS0030` in production code only, since Digitals.Testing drops it from
+  test projects. It bans raw SQL strings to EF Core (`FromSqlRaw`, `ExecuteSqlRaw`, `SqlQueryRaw`; use `FromSql($"...")`
+  and its siblings), unencoded markup (`Html.Raw`, `HtmlString`, `MarkupString`; write `@value`), and one-string
+  process arguments (`ProcessStartInfo.Arguments` and the matching `Process.Start` overloads; use `ArgumentList`).
+- `SonarLint.xml`, the Sonar thresholds. It raises `S1541` to 15 and leaves the rest at Sonar's defaults.
+- The `DIGB` build checks, described below.
 
-Custom rules: **DT00001** any `System.DateTime` use incl. bare declarations, **DT00002** `DateTimeOffset.DateTime`/`.LocalDateTime`, **DT00003** `new HttpClient` (use `IHttpClientFactory`), **DT00004** `dynamic`, **DT00006** money as `double`/`float` (suggestion only), **DT00007** any class deriving from `System.TimeProvider` (use Microsoft's `FakeTimeProvider`). Also sets `SYSLIB1045` (use `[GeneratedRegex]`) to warning.
+The Digitals rules, each with an example on [the rules page](../rules/analyzers.md):
 
-The package also ships `Digitals.Analyzers.targets` — **DIGB001** build error on direct references to banned packages (Newtonsoft.Json, AutoMapper, EF6, System.Data.SqlClient, EF Proxies). Full list and replacements on [the rules page](../rules/analyzers.md). Test frameworks, assertion and mocking libraries are banned by Digitals.Testing under `DIGT002`. Escape hatch, next to a comment explaining why:
+| Rule | What it reports |
+| --- | --- |
+| [`DT00001`](../rules/analyzers.md#dt00001) | Any `System.DateTime`, including a bare property declaration |
+| [`DT00002`](../rules/analyzers.md#dt00002) | `DateTimeOffset.DateTime` and `DateTimeOffset.LocalDateTime` |
+| [`DT00003`](../rules/analyzers.md#dt00003) | `new HttpClient()`; use `IHttpClientFactory`. Production code only |
+| [`DT00004`](../rules/analyzers.md#dt00004) | `dynamic` |
+| [`DT00006`](../rules/analyzers.md#dt00006) | Money held as `double` or `float`. A suggestion |
+| [`DT00007`](../rules/analyzers.md#dt00007) | A class deriving from `TimeProvider`; use `FakeTimeProvider` in tests |
+| [`DT00008`](../rules/analyzers.md#dt00008) | A method returning a nullable collection |
+| [`DT00009`](../rules/analyzers.md#dt00009) | `#region` |
+| [`DT00010`](../rules/analyzers.md#dt00010) | A negatively named boolean such as `IsNotBookable` |
+| [`DT00011`](../rules/analyzers.md#dt00011) | A local reused for an unrelated value. A suggestion |
+| [`DT00012`](../rules/analyzers.md#dt00012) | A file not named after a type it declares |
+| [`DT00013`](../rules/analyzers.md#dt00013) | The same run of steps repeated in one member. Production code only |
+| [`DT00014`](../rules/analyzers.md#dt00014) | An orchestration method building a large object inline. Production code only |
+| [`DT00015`](../rules/analyzers.md#dt00015) | An orchestration method over 20 statements. Production code only |
+| [`DT00016`](../rules/analyzers.md#dt00016) | A run of member assignments on another object between other steps. Production code only |
+| [`DT00017`](../rules/analyzers.md#dt00017) | An orchestration method that calls, checks and throws inline |
+| [`DT00018`](../rules/analyzers.md#dt00018) | An orchestration method calling infrastructure directly. Production code only |
+
+`DT00005` is retired. Every `DT` rule is a warning except the two marked as suggestions.
+
+The build checks run before compiling and fail the build:
+
+- `DIGB001`, a direct reference to a banned package: `Newtonsoft.Json`, AutoMapper, Entity Framework 6,
+  `System.Data.SqlClient` or the EF Core lazy-loading proxies. The replacements are on
+  [the rules page](../rules/analyzers.md#digb001). Test frameworks, assertion and mocking libraries are banned by
+  Digitals.Testing as `DIGT002`.
+- `DIGB002`, when `<Nullable>` is not `enable`.
+- `DIGB003`, when `<TreatWarningsAsErrors>` is not `true`.
+- `DIGB004`, when the NuGet vulnerability audit is weakened: `NuGetAudit` off, `NuGetAuditMode` not `all`,
+  `NuGetAuditLevel` above `low`, or one of `NU1901` to `NU1904` in `NoWarn` or `WarningsNotAsErrors`.
+
+Each check has a per-project opt-out for a staged migration. Set it next to a comment saying why, and what will let
+you remove it:
 
 ```xml
+<!-- Payments still serialises with Newtonsoft attributes; remove with TICKET-1301. -->
 <DigitalsAllowBannedPackages>Newtonsoft.Json</DigitalsAllowBannedPackages>
-```
-
-It also gates compiler strictness: **DIGB002** build error when `<Nullable>` is not `enable`, **DIGB003** when `<TreatWarningsAsErrors>` is not `true`. Per-project escape hatches for staged migrations, each next to a comment saying which campaign removes it:
-
-```xml
 <DigitalsAllowNullableDisabled>true</DigitalsAllowNullableDisabled>
 <DigitalsAllowWarningsNotAsErrors>true</DigitalsAllowWarningsNotAsErrors>
+<DigitalsAllowWeakNuGetAudit>true</DigitalsAllowWeakNuGetAudit>
 ```
 
-A repo-local `.editorconfig` always **overrides** the packaged globalconfig — that is the per-repo opt-out mechanism.
+A repo-local `.editorconfig` always beats the packaged globalconfig. That is the per-repo opt-out for a rule.
 
 ## Install
 
-1. **nuget.config** — nothing to add. The package is published to nuget.org, so the
-   default source already resolves it. If the repo uses package source mapping,
-   `Digitals.*` has to be mapped to `nuget.org`, otherwise restore will not look there:
+1. Add one reference in `Directory.Build.props`, so it reaches every project. Remove any existing references to
+   SonarAnalyzer.CSharp, `Roslynator.*`, Microsoft.VisualStudio.Threading.Analyzers and
+   Microsoft.CodeAnalysis.BannedApiAnalyzers: the package brings them, and a second reference causes version conflicts.
+
+   ```xml
+   <ItemGroup>
+     <PackageReference Include="Digitals.Analyzers" PrivateAssets="all" />
+   </ItemGroup>
+   ```
+
+   With central package management the version goes in `Directory.Packages.props`. Without it, put `Version` on the
+   reference. Take the latest from [nuget.org](https://www.nuget.org/packages/Digitals.Analyzers):
+
+   ```xml
+   <PackageVersion Include="Digitals.Analyzers" Version="x.y.z" />
+   ```
+
+2. The package is on nuget.org, so `nuget.config` needs nothing new. If the repo uses package source mapping, map
+   `Digitals.*` to `nuget.org`, or restore never looks there:
 
    ```xml
    <packageSourceMapping>
@@ -43,84 +99,104 @@ A repo-local `.editorconfig` always **overrides** the packaged globalconfig — 
    </packageSourceMapping>
    ```
 
-2. **Directory.Build.props** — one reference for the whole solution; **remove** any existing references to SonarAnalyzer.CSharp, Roslynator.*, Microsoft.VisualStudio.Threading.Analyzers, Microsoft.CodeAnalysis.BannedApiAnalyzers (the package brings them; duplicates cause version conflicts):
+3. If restore reports `NU1100` while nuget.org has the package, check the user-level `~/.nuget/NuGet/NuGet.Config` for
+   `nuget.org` under `<disabledPackageSources>` and run `dotnet nuget enable source nuget.org`. Clear a stale HTTP cache
+   with `dotnet nuget locals http-cache --clear`.
 
-   ```xml
-   <ItemGroup>
-     <PackageReference Include="Digitals.Analyzers" PrivateAssets="all" />
-   </ItemGroup>
-   ```
+4. The SDK must be 10.0.100 or later. The analyzers need the Roslyn compiler that SDK ships; on an older one the build
+   prints `CS9057` and drops them.
 
-   With Central Package Management, the version goes in Directory.Packages.props:
-
-   ```xml
-   <PackageVersion Include="Digitals.Analyzers" Version="0.4.0" />
-   ```
-
-3. **Restore gotcha (NU1100):** if restore says the package doesn't exist while nuget.org clearly has it, check the *user-level* `~/.nuget/NuGet/NuGet.Config` for `nuget.org` under `<disabledPackageSources>` — `dotnet nuget enable source nuget.org`. Also clear a stale http-cache: `dotnet nuget locals http-cache --clear`. Repos still pointing at the old Azure Artifacts feed will pin at the last version pushed there; move them to nuget.org.
-
-4. `TreatWarningsAsErrors=true` means every warning-severity rule fails the build. That is intended; the graces below are how you stage adoption.
+With `TreatWarningsAsErrors` on, every warning-severity rule fails the build. That is intended. The rest of this guide
+is how to stage it.
 
 ## Trim the repo .editorconfig
 
-The package now owns style + severity policy. The repo `.editorconfig` should keep only what a global config cannot express:
+The package carries the style and severity policy, so the repo's `.editorconfig` keeps only what a globalconfig can't
+hold:
 
-- editor-core keys (`[*]` indent/charset/eol — editors read these from disk, not from the package)
-- `max_line_length` (editor ruler)
-- path-scoped overrides — **global configs have no path sections**, so anything per-folder lives here
+- Editor settings under `[*]` (indent, charset, line endings). Editors read these from disk, not from the package.
+- `max_line_length`, for the editor ruler.
+- Anything scoped to a path. A globalconfig has no path sections, so a per-folder setting lives in `.editorconfig`.
 
-Delete everything that duplicates the packaged globalconfig.
+Delete everything that repeats the packaged globalconfig.
 
-## First build — expect these, fix in this order
+## First build
 
-Do a **full clean rebuild** before trusting any count (`dotnet clean` + wipe `bin`/`obj`); stale incremental builds under-report analyzer errors.
+Start from a clean tree before trusting any count: `dotnet clean`, then delete every `bin` and `obj`. A stale
+incremental build under-reports analyzer findings. Expect these, and fix them in this order:
 
 | Diagnostic | Fix |
 | --- | --- |
-| DIGB001 | Swap the banned package for its replacement, or `<DigitalsAllowBannedPackages>` + reason comment if migration is a separate campaign. |
-| DIGB002 / DIGB003 | Set `<Nullable>enable</Nullable>` / `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` in Directory.Build.props. If the repo cannot absorb that yet, the `DigitalsAllow*` opt-outs above, per project, + reason comment. |
-| RS0030 (clock) | Inject `TimeProvider`, call `GetUtcNow()`. Bootstrap logging before DI exists: scoped pragma with reason. |
-| DT00001 | Rewrite to `DateTimeOffset`/`DateOnly` where cheap. Entity/DTO properties mirroring `datetime2` columns or wire contracts: downgrade repo-wide to `suggestion` until a column migration retypes them (see template). |
-| DT00002 | `.DateTime` → `.UtcDateTime`. Same ticks at offset 0, but Kind flips Unspecified→Utc, so `"O"` round-trip strings gain a `Z` — check wire consumers. |
-| DT00003 | `IHttpClientFactory` via `AddHttpClient`. |
-| CA1851 | Materialise once with `ToList()`/`ToArray()`, or take `IReadOnlyCollection<T>` instead of `IEnumerable<T>`. On a deferred LINQ query this is a real duplicated round trip, not style. |
-| CA1310 | Add `StringComparison.Ordinal` (or `OrdinalIgnoreCase`) to the `StartsWith`/`EndsWith`/`IndexOf`/`Compare` call. |
-| S3776 | Extract methods until each is under 15 cognitive complexity. The threshold is not settable from the packaged globalconfig — Sonar reads rule parameters from a `SonarLint.xml` AdditionalFile, so a repo that needs a different limit ships one, or downgrades S3776 in its `.editorconfig` with a comment naming the campaign that restores it. |
-| CA2248 | `HasFlag` is being passed a member of a different enum, so the call always returns false. Fix the argument, or the enum it came from. |
-| RCS1157 | A `[Flags]` composite covers a bit no member defines (`All = 7` over `Read = 1, Write = 2`). Define the missing member or narrow the composite. |
-| S6513 | Add `Justification = "..."` to the `[ExcludeFromCodeCoverage]`, saying what makes the code untestable. No reason to give means the exclusion should go, not the warning. |
-| SYSLIB1045 | Convert `new Regex(...)` to `[GeneratedRegex]` partial methods (class becomes `partial`). |
+| `DIGB001` | Swap the package for its replacement, or set `DigitalsAllowBannedPackages` with a reason if the move is separate work. |
+| `DIGB002`, `DIGB003` | Set `<Nullable>enable</Nullable>` and `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` in `Directory.Build.props`. If a project can't take that yet, use the `DigitalsAllow*` opt-out in that project, with a reason. |
+| `DIGB004` | Remove the setting that weakens the audit. To accept one known advisory, suppress just that one with `<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-…" />`. The SDK defaults `NuGetAuditMode` to `all` only from `net10.0`, so a project on an older target sets it in `Directory.Build.props`. |
+| `RS0030`, clock | Inject `TimeProvider` and call `GetUtcNow()`. Logging that runs before the DI container exists keeps a scoped `#pragma` with the reason. |
+| `RS0030`, milliseconds | Pass a `TimeSpan`: `Task.Delay(TimeSpan.FromSeconds(5), cancellationToken)`. |
+| `RS0030`, raw SQL, HTML and command lines | See [the rules page](../rules/analyzers.md#banned-apis). Each has a safe overload that takes the same input. |
+| `DT00001` | Move to `DateTimeOffset` or `DateOnly` where it is cheap. Entity and DTO properties that mirror `datetime2` columns or a wire contract can stay, with the rule lowered to `suggestion` for those files until a column migration retypes them (see the template below). |
+| `DT00002` | `.DateTime` becomes `.UtcDateTime`. The ticks are the same at offset 0, but `Kind` changes from `Unspecified` to `Utc`, so an `"O"` round-trip string gains a `Z`. Check what reads it. |
+| `DT00003` | `IHttpClientFactory`, through `AddHttpClient`. |
+| `DT00013` to `DT00018` | Move the detail into a named helper. Each section on the rules page shows the fix and the `.editorconfig` keys that tune it. |
+| `CA1851` | Materialise once with `ToList()` or `ToArray()`, or take `IReadOnlyCollection<T>` instead of `IEnumerable<T>`. On a deferred LINQ query this is a real second round trip, not style. |
+| `CA1310` | Pass `StringComparison.Ordinal` or `OrdinalIgnoreCase` to the `StartsWith`, `EndsWith`, `IndexOf` or `Compare` call. |
+| `S3776` | Extract methods until each is at 15 cognitive complexity or under. To change the limit, see [Sonar thresholds](#sonar-thresholds). |
+| `CA2248` | `HasFlag` is passed a member of a different enum, so the call always returns false. Fix the argument, or the enum it came from. |
+| `RCS1157` | A `[Flags]` composite covers a bit no member defines (`All = 7` over `Read = 1, Write = 2`). Define the missing member or narrow the composite. |
+| `S6513` | Add `Justification = "..."` to the `[ExcludeFromCodeCoverage]`, saying what makes the code untestable. If there is no reason to give, the exclusion should go, not the warning. |
+| `SYSLIB1045` | Turn `new Regex(...)` into a `[GeneratedRegex]` partial method; the class becomes `partial`. |
 
-Rules of thumb:
+Three ways to deal with a finding, in order of preference:
 
-- **Genuine rewrite** when cheap and behavior-preserving (DateOnly, GeneratedRegex, TimeProvider injection).
-- **File-level `#pragma warning disable DTxxxxx // reason`** where a DB/wire contract forces the type (EF expression trees, raw SqlDataReader, sanctioned adapter extensions). The pragmas are grep-able — they *are* the future column-migration worklist.
-- **`.editorconfig` scoped grace** for generated code and whole-tier campaigns. Never blanket-`none` a rule repo-wide without a comment saying what campaign removes it.
+- Rewrite the code when that is cheap and keeps behaviour (`DateOnly`, `[GeneratedRegex]`, injecting `TimeProvider`).
+- A `#pragma warning disable DT00001 // reason` where a database or wire contract forces the type (EF expression
+  trees, a raw `SqlDataReader`). The pragmas are easy to grep, and they become the worklist for the column migration.
+- An `.editorconfig` section for generated code and for a whole layer that is being moved over. Don't set a rule to
+  `none` for the whole repo without a comment saying what removes it.
 
-## .editorconfig template (scoped overrides)
+## .editorconfig template
 
 ```ini
-# ADOPTION GRACE: remove each block when its campaign lands.
-# EF Core migrations are generated — but only *.Designer.cs carries the
-# <auto-generated/> header, so hand-written migration .cs files are NOT
-# auto-skipped. Exempt the folder.
+# Adoption: remove each section once its work lands.
+
+# EF Core migrations are generated, but only *.Designer.cs carries the
+# <auto-generated/> header, so hand-written migration files are analyzed.
 [**/Migrations/**.cs]
 dotnet_diagnostic.RS0030.severity = none
 dotnet_diagnostic.DT00001.severity = none
 
-# EF model mapping = SQL interop; property lambdas must reference DateTime columns
+# EF model mapping is SQL interop; property lambdas reference DateTime columns.
 [**/EntityFramework/Configurations/**.cs]
 dotnet_diagnostic.DT00001.severity = none
 ```
 
+The package already exempts files under `Migrations/` from `S104`, the file length rule.
+
+## Sonar thresholds
+
+Sonar reads rule parameters only from a `SonarLint.xml` additional file, never from a globalconfig. The package ships
+one, and steps aside when a project brings its own. Yours replaces the package's file as a whole, so start from a copy
+of [the packaged SonarLint.xml](../../src/Digitals.Analyzers/build/config/SonarLint.xml) and keep its `S1541` entry,
+or that limit drops back to Sonar's default of 10:
+
+```xml
+<ItemGroup>
+  <AdditionalFiles Include="$(MSBuildThisFileDirectory)SonarLint.xml" />
+</ItemGroup>
+```
+
+Lowering a rule in `.editorconfig`, with a comment saying what restores it, is the other way.
+
 ## Verify
 
-1. Full clean rebuild — zero warnings/errors.
-2. `dotnet format --verify-no-changes` (note: `dotnet format --diagnostics <id>` also applies unrelated fixers — review the diff).
-3. Full test suite + whatever coverage gate the repo enforces.
+1. Clean rebuild, with zero warnings and errors.
+2. `dotnet format --verify-no-changes`. `dotnet format --diagnostics <id>` also applies fixers for other rules, so
+   review its diff.
+3. The full test suite, with the repo's coverage gate.
 
 ## Known limitations
 
-- `using DT = System.DateTime;` reports the alias line itself, but not the places that use `DT`.
-- RS0030 fires on creation/invocation/member access, **not** bare declarations — DT00001 exists to close that gap.
-- Naming-convention rules only fail the build via `IDE1006` severity (already set in the packaged globalconfig); per-`dotnet_naming_rule` severity is IDE-only.
+- `using DT = System.DateTime;` reports the alias line, but not the places that use `DT`.
+- `RS0030` reports creating, calling and reading a member, never a bare declaration. `DT00001` covers that gap for
+  `DateTime`.
+- A naming rule fails the build only through `IDE1006`, which the packaged globalconfig raises. The `severity` on a
+  `dotnet_naming_rule` is read by the IDE alone.

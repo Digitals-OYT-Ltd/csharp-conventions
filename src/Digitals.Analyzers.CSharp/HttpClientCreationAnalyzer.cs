@@ -20,7 +20,8 @@ public sealed class HttpClientCreationAnalyzer : DiagnosticAnalyzer
         messageFormat: "Use IHttpClientFactory (AddHttpClient) — a new HttpClient per call exhausts sockets",
         category: "Digitals.Http",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00003");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

@@ -8,6 +8,7 @@ using Verify = Microsoft.CodeAnalysis.CSharp.Testing.CSharpAnalyzerTest<
 
 namespace Digitals.Testing.CSharp.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class TestTraitAnalyzerTests
 {
     private const string XunitStub = """

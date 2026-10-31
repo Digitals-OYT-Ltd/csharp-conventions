@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Digitals.Testing.Coverage.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class CoverageSummaryTests
 {
     private static XDocument Report(

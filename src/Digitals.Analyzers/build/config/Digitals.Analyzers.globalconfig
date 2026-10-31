@@ -1,6 +1,6 @@
 # ============================================================================
 # Org-wide analyzer + code-style policy, shipped with Digitals.Analyzers.
-# Derived from the master templates/dotnet/.editorconfig (docs repo).
+# Derived from the Digitals .editorconfig template for .NET repos.
 #
 # Global AnalyzerConfig: severities only. What is NOT ENFORCEABLE here and must
 # stay in each repo's thin .editorconfig:

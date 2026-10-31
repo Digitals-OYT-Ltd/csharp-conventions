@@ -31,6 +31,7 @@ public sealed class OrchestrationStatementBudgetAnalyzer : DiagnosticAnalyzer
         category: "Digitals.Design",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00015",
         description: "An orchestration method reads as a recipe when each step is one line, so it stays short. Past the"
             + " limit it carries the detail of its steps as well. Statements are counted at any depth, including inside"
             + " lambdas, but blocks, empty statements and local functions are not counted, so formatting never moves"

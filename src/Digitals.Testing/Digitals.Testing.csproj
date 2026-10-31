@@ -14,7 +14,7 @@
 		<!-- Deliberately generic: the bundled packages and rule list change between releases, and
 		     nuget.org shows this text for every past version. -->
 		<Description>Opinionated C# test meta-package for Digitals .NET repositories. Bundles the org test stack together with the shared test severity policy, the banned test packages, the code coverage configuration and a coverage gate that fails the run below the org floor. Reference this one package from a test project to get a consistent test setup across every repository; see the README for what is in force in this version.</Description>
-		<PackageTags>testing;xunit;xunit-v3;nsubstitute;bogus;code-coverage;coverage;mtp;microsoft-testing-platform;analyzers;test-conventions;dotnet</PackageTags>
+		<PackageTags>testing;xunit;xunit-v3;nsubstitute;code-coverage;coverage;mtp;microsoft-testing-platform;analyzers;test-conventions;dotnet</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<!-- This project compiles nothing of its own; the shipped assemblies come from the two
 		     sibling projects and are packed explicitly below. -->

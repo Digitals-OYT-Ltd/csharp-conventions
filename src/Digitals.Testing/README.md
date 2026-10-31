@@ -2,7 +2,7 @@
 
 `Digitals.Testing` is the whole test stack for a .NET test project in one reference: [xunit.v3](https://xunit.net) on Microsoft.Testing.Platform, [NSubstitute](https://nsubstitute.github.io), `FakeTimeProvider`, Microsoft's coverage engine and the TRX reporter. It adds the Digitals test policy, our own `DT1####` rules and a coverage gate that fails the run below the floor. It is the test-project companion to [Digitals.Analyzers](https://www.nuget.org/packages/Digitals.Analyzers).
 
-Reference it from each test project, and remove the test packages it replaces (`Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`, `coverlet.collector`, `xunit.v3`, `NSubstitute`):
+Reference it from each test project, and remove the test packages it replaces (`xunit.v3`, `xunit`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`, `NSubstitute`, `Moq`, `coverlet.collector`, `coverlet.msbuild`, `FluentAssertions`, `Microsoft.Extensions.TimeProvider.Testing`, `Microsoft.Testing.Extensions.TrxReport`). The reference has no `Version` because it assumes central package management; without it, add `Version` with the latest from this page:
 
 ```xml
 <ItemGroup>
@@ -20,10 +20,10 @@ Select the Microsoft.Testing.Platform runner in `global.json` at the repo root. 
 
 | What | Does |
 | --- | --- |
-| Project defaults | `OutputType=Exe`, `IsTestProject`, the test platform entry point, and `global using Xunit`. |
+| Project defaults | `OutputType=Exe`, `IsTestProject`, `IsPackable=false` and `global using Xunit`. |
 | Test policy | A global AnalyzerConfig at `global_level 300`, which relaxes the production rules that fight the way tests are written and raises a skipped test (`xUnit1004`) to a warning. |
 | `DT1####` rules | Test names made of PascalCase segments, a `Category` trait on every test, no wall-clock waits, and an assertion every test reaches. |
-| `DIGT002` | Fails the build on a direct reference to the VSTest stack, coverlet, Moq, FluentAssertions, xUnit v2, NUnit or MSTest. |
+| `DIGT002` | Fails the build on a direct reference to the VSTest stack, coverlet, Moq, FluentAssertions, xUnit v2, NUnit, MSTest, or the xUnit v2 builds of ArchUnitNET, FsCheck, Verify and Playwright. |
 | Coverage | Collected on every `dotnet test`, with no flags. Test assemblies, generated code, migrations and `[ExcludeFromCodeCoverage]` are left out. |
 | Coverage gate | Fails the run below 100% line or branch coverage, above a CRAP score of 30 or above a cyclomatic complexity of 20 in any method. |
 | TRX report | Written to `TestResults/` for a CI step to publish. `<DigitalsTrxReport>false</DigitalsTrxReport>` turns it off. |

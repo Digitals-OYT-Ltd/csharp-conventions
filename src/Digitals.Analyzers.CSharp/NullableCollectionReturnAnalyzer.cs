@@ -23,7 +23,8 @@ public sealed class NullableCollectionReturnAnalyzer : DiagnosticAnalyzer
         messageFormat: "'{0}' returns a nullable collection — null and empty mean the same thing to a caller; return an empty collection instead",
         category: "Digitals.Types",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00008");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =

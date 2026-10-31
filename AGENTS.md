@@ -7,7 +7,7 @@ csharp-conventions, the two NuGet packages that carry the Digitals C# rules into
 ## Tooling: `just`
 
 - `just test`: every test project; `just test Analyzers` (or `Testing`) runs one package's.
-- `just format` fixes formatting; `just format-check` is what CI runs.
+- `just format` fixes formatting; `just format-check` checks it, and CI runs the same check scoped to the package.
 - `just pack`: every `.nupkg` into `artifacts/`; `just pack Testing` packs one.
 - `just check-ledger`: fails while an `AnalyzerReleases.Unshipped.md` still lists a rule. Each workflow runs it on a release tag.
 - `just clean` removes every `bin/`, `obj/`, `artifacts/` and `TestResults/`. Run it before believing a `Zero tests ran`, and before repacking after adding a file under a package's `build/`.
@@ -17,9 +17,9 @@ csharp-conventions, the two NuGet packages that carry the Digitals C# rules into
 
 Verification gate: before claiming done, run `just format-check`, `just test` and `just pack`. A change under a package's `build/`, its globalconfig or its packaging also needs a scratch consumer built against the packed nupkg, as that package's AGENTS.md describes.
 
-## Standards: mandatory consult
+## Standards
 
-`dt rules csharp` before C# work, `dt rules testing` before tests. Cite rule IDs such as `csharp/pin-analyzer-ruleset`. When changing policy (severities, banned symbols or packages, coverage floors), `dt read` the analyzer or testing standards pages first.
+Digitals maintainers have the org standards through the `dt` CLI: `dt rules csharp` before C# work, `dt rules testing` before tests, citing rule IDs such as `csharp/pin-analyzer-ruleset`. Before changing policy (severities, banned symbols or packages, coverage floors), `dt read` the analyzer or testing standards pages. Without `dt`, `docs/rules/` and the `AGENTS.md` beside each package are the reference.
 
 ## Layout
 
@@ -27,11 +27,12 @@ Verification gate: before claiming done, run `just format-check`, `just test` an
 - `src/Digitals.Testing/` is the package, with its rules in `src/Digitals.Testing.CSharp/` and the coverage gate in `src/Digitals.Testing.Coverage/`, tested in `tests/Digitals.Testing.CSharp.Tests/` and `tests/Digitals.Testing.Coverage.Tests/`. `src/Digitals.Testing/AGENTS.md` covers the test stack, the policy, the gate and the `DIGT` checks.
 - Each package's `README.md` is its nuget.org page. `docs/rules/<package>.md` explains every rule with a failing and a passing example; `docs/adoption/<package>.md` is the guide for moving a consuming repo onto it.
 - `Directory.Packages.props` holds every version (central package management): what each package ships and what this repo builds with. A `PackageReference` in a csproj names the package only.
-- `tests/Directory.Build.props` imports `Digitals.Testing.globalconfig` from source into every test project, so a relaxation these tests need is added where every consumer gets it, never in `.editorconfig`.
-- `.editorconfig` is the org master verbatim. Silence a rule for one file there, with a comment giving the reason.
+- `tests/Directory.Build.props` imports `Digitals.Testing.globalconfig` and the `DT1####` rules from source into every test project, so a relaxation these tests need is added where every consumer gets it, never in `.editorconfig`. Each test class carries `[Trait("Category", "Unit")]`, or `"Integration"` when it touches the file system.
+- `.editorconfig` is the shared Digitals file, identical in every org .NET repo; change the org template first. Silence a rule for one file there, with a comment giving the reason.
 
 ## Gotchas
 
+- This repo's own code is analyzed by the released `Digitals.Analyzers` from nuget.org (the version in `Directory.Packages.props`), not by the source in `src/`. A policy change reaches this repo only after it is released and that version is bumped.
 - One ID space, two allocators. `Digitals.Analyzers` owns `DT0####` and `Digitals.Testing` owns `DT1####`; both reach every test project, so a shared number would make one `#pragma warning disable` silence two unrelated rules. Never reuse or renumber a shipped ID, since IDs live in suppressions and configs across org repos. A rule that moves out keeps its ID and gets a `### Removed Rules` row in `AnalyzerReleases.Unshipped.md`; the ID is retired, never recycled.
 - A new rule is a row in its project's `AnalyzerReleases.Unshipped.md` (RS2008 fails the build without it), moved to `Shipped.md` under the version heading in the release commit. Don't list either file as `AdditionalFiles`: `Microsoft.CodeAnalysis.Analyzers` adds both itself, and a second item makes `dotnet format` report `Duplicate source file`.
 - Never put a section header in a globalconfig: not `[*]`, not a path glob. A global AnalyzerConfig only accepts absolute paths as section names; Roslyn rejects anything else with `warning InvalidGlobalSectionName` and drops the section and every entry after it, which is the whole policy. Whitespace settings (`indent_size`, `charset`, ...) can't live there for the same reason; they belong in each consuming repo's `.editorconfig`.
@@ -52,8 +53,8 @@ Verification gate: before claiming done, run `just format-check`, `just test` an
 
 - Which package a rule goes in: a rule that holds in production code goes in `Digitals.Analyzers`, which reaches every project. Only a rule that means nothing outside a test project goes in `Digitals.Testing`, which is scoped by its package reference. The `TimeProvider` subclass ban is `DT00007` in Analyzers for that reason; a copy that briefly shipped in Testing was deleted.
 - Precedence: `Digitals.Analyzers.globalconfig` is `global_level 100`, `Digitals.Testing.globalconfig` is `300` and relaxes it in test projects. A repo-local `.editorconfig` beats both, and per-repo opt-outs there are expected.
-- `DT#####` rules ship as `warning`; repos escalate with `TreatWarningsAsErrors`. The `DIGB` and `DIGT` build checks are errors, each with a `DigitalsAllow*` opt-out.
+- `DT#####` rules ship as `warning` (`DT00006` and `DT00011` as `suggestion`); repos escalate with `TreatWarningsAsErrors`. The `DIGB` and `DIGT` build checks are errors, each with a `DigitalsAllow*` opt-out.
 
 ## Recorded deviations
 
-- `csharp/use-directory-build-props`: `TargetFramework` stays per csproj and `LangVersion` is set (14). The analyzers and the coverage gate are netstandard2.0 by necessity, Digitals.Testing and the tests are net10.0. Reasons are in `Directory.Build.props`.
+- From the org rule `csharp/use-directory-build-props`: `TargetFramework` stays per csproj and `LangVersion` is set (14). The analyzers and the coverage gate are netstandard2.0 by necessity, Digitals.Testing and the tests are net10.0. Reasons are in `Directory.Build.props`.

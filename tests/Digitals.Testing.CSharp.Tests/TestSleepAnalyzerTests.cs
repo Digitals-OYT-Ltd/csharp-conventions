@@ -8,6 +8,7 @@ using Verify = Microsoft.CodeAnalysis.CSharp.Testing.CSharpAnalyzerTest<
 
 namespace Digitals.Testing.CSharp.Tests;
 
+[Trait("Category", "Unit")]
 public sealed class TestSleepAnalyzerTests
 {
     // Net80 carries Thread, Task and TimeProvider, so no stub is needed here.

@@ -37,7 +37,7 @@ production code. It brings four kinds of check:
   production code and wrong for tests.
 
 Rule IDs from this package come from `DT1####`. Digitals.Analyzers keeps `DT0####`, so the two never collide in a
-`#pragma` or an `.editorconfig`. Its rules are on [their own page](analyzers.md).
+`#pragma` or an `.editorconfig`. `DT10002` was never allocated. Its rules are on [their own page](analyzers.md).
 
 The examples edit one small, clean solution: a `Bookings` library with a `RoomBooking` for meeting rooms and studios,
 and a `Bookings.Tests` project that references `Digitals.Testing` and nothing else. Moving a repo onto the package is
@@ -80,7 +80,7 @@ derived from them.
 ```
 
 ```text
-Bookings.Tests/RoomBookingTests.cs(7,17): warning DT10001: Test 'price_for_two_hours' is not made of PascalCase segments separated by single underscores (aim for Method_Scenario_ExpectedResult) (https://github.com/Digitals-OYT-Ltd/engineering-standards/blob/main/docs/standards/testing/csharp/unit-tests.md)
+Bookings.Tests/RoomBookingTests.cs(7,17): warning DT10001: Test 'price_for_two_hours' is not made of PascalCase segments separated by single underscores (aim for Method_Scenario_ExpectedResult) (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/testing.md#dt10001)
 ```
 
 ### `DT10003`
@@ -102,13 +102,13 @@ counts as no trait.
 ```
 
 ```text
-Bookings.Tests/RoomBookingTests.cs(6,17): warning DT10003: Test 'Price_TwoHours_IsTwiceTheRate' has no [Trait("Category", ...)], so no CI filter selects it and it runs nowhere (https://github.com/Digitals-OYT-Ltd/engineering-standards/blob/main/docs/standards/testing/csharp/index.md)
+Bookings.Tests/RoomBookingTests.cs(6,17): warning DT10003: Test 'Price_TwoHours_IsTwiceTheRate' has no [Trait("Category", ...)], so no CI filter selects it and it runs nowhere (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/testing.md#dt10003)
 ```
 
 > **Note:** With `digitals_testing.allowed_trait_values = Unit, Integration` set, a trait outside the list fails too:
 >
 > ```text
-> Bookings.Tests/RoomBookingTests.cs(7,17): warning DT10003: Test 'Price_TwoHours_IsTwiceTheRate' has [Trait("Category", "Smoke")], which is not one of the values this repo allows (Unit, Integration) (https://github.com/Digitals-OYT-Ltd/engineering-standards/blob/main/docs/standards/testing/csharp/index.md)
+> Bookings.Tests/RoomBookingTests.cs(7,17): warning DT10003: Test 'Price_TwoHours_IsTwiceTheRate' has [Trait("Category", "Smoke")], which is not one of the values this repo allows (Unit, Integration) (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/testing.md#dt10003)
 > ```
 
 ### `DT10004`
@@ -117,7 +117,7 @@ Bookings.Tests/RoomBookingTests.cs(6,17): warning DT10003: Test 'Price_TwoHours_
 
 No `Thread.Sleep`, and no `Task.Delay` without a `TimeProvider`. A sleep is a guess at how long something takes, made
 on an idle laptop and run on a busy CI agent: too short and the test flakes, too long and the suite crawls. To move
-time, advance a `FakeTimeProvider`, which the package brings in `Microsoft.Extensions.Time.Testing`. To wait for a
+time, advance a `FakeTimeProvider`, which the package brings in (namespace `Microsoft.Extensions.Time.Testing`). To wait for a
 condition, poll with a deadline. Where a real delay is needed, `Task.Delay(delay, timeProvider, cancellationToken)`
 takes a `TimeProvider` and passes. The rule covers every call in the project, fixtures and helpers included.
 
@@ -139,13 +139,13 @@ takes a `TimeProvider` and passes. The rule covers every call in the project, fi
 ```
 
 ```text
-Bookings.Tests/BookingReminderTests.cs(12,9): warning DT10004: 'Thread.Sleep' makes this test wait on the wall clock — advance a FakeTimeProvider, poll for the condition, or pass a TimeProvider to Task.Delay (https://github.com/Digitals-OYT-Ltd/engineering-standards/blob/main/docs/standards/testing/csharp/unit-tests.md)
+Bookings.Tests/BookingReminderTests.cs(12,9): warning DT10004: 'Thread.Sleep' makes this test wait on the wall clock — advance a FakeTimeProvider, poll for the condition, or pass a TimeProvider to Task.Delay (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/testing.md#dt10004)
 ```
 
-> **Note:** `await Task.Delay(TimeSpan.FromMinutes(1), TestContext.Current.CancellationToken)` in the same place gets the same finding:
+> **Note:** `await Task.Delay(TimeSpan.FromMinutes(1), TestContext.Current.CancellationToken)` in an `async Task` version of the test gets the same finding:
 >
 > ```text
-> Bookings.Tests/BookingReminderTests.cs(12,15): warning DT10004: 'Task.Delay' makes this test wait on the wall clock — advance a FakeTimeProvider, poll for the condition, or pass a TimeProvider to Task.Delay (https://github.com/Digitals-OYT-Ltd/engineering-standards/blob/main/docs/standards/testing/csharp/unit-tests.md)
+> Bookings.Tests/BookingReminderTests.cs(12,15): warning DT10004: 'Task.Delay' makes this test wait on the wall clock — advance a FakeTimeProvider, poll for the condition, or pass a TimeProvider to Task.Delay (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/testing.md#dt10004)
 > ```
 
 ### `DT10005`
@@ -155,8 +155,9 @@ Bookings.Tests/BookingReminderTests.cs(12,9): warning DT10004: 'Thread.Sleep' ma
 Every test reaches an assertion. A test that runs the code and checks nothing passes whatever the code does, and
 coverage still counts its lines as tested. At a 100% floor that is the one way left to look tested without being
 tested. The rule follows calls into any method declared in the test project, however deep, so a test that calls its
-own `AssertPrice(booking, 90m)` passes. Methods from another assembly count only by name: any `Assert.*`, Verify's
-`Verify*`, NSubstitute's `Received`, `DidNotReceive` and `Received.InOrder`, Roslyn's `AnalyzerTest.RunAsync`, and
+own `AssertPrice(booking, 90m)` passes. Methods from another assembly count only by name: any `Assert.*`, Verify.XunitV3.s
+`Verify*`, NSubstitute.s `Received`, `ReceivedWithAnyArgs`, `DidNotReceive`, `DidNotReceiveWithAnyArgs` and
+`Received.InOrder`, Roslyn's `AnalyzerTest.RunAsync`, and
 whatever the repo adds in `digitals_testing.assertion_methods`. A test whose point is that nothing throws says so with
 `Assert.Null(Record.Exception(...))`.
 
@@ -172,7 +173,7 @@ whatever the repo adds in `digitals_testing.assertion_methods`. A test whose poi
 ```
 
 ```text
-Bookings.Tests/RoomBookingTests.cs(7,17): warning DT10005: Test 'Price_TwoHours_IsTwiceTheRate' reaches no assertion, so it passes whatever the code under test does; assert on the outcome, write a does-not-throw test as Assert.Null(Record.Exception(...)), or name an asserting harness in digitals_testing.assertion_methods (https://github.com/Digitals-OYT-Ltd/engineering-standards/blob/main/docs/standards/testing/csharp/unit-tests.md)
+Bookings.Tests/RoomBookingTests.cs(7,17): warning DT10005: Test 'Price_TwoHours_IsTwiceTheRate' reaches no assertion, so it passes whatever the code under test does; assert on the outcome, write a does-not-throw test as Assert.Null(Record.Exception(...)), or name an asserting harness in digitals_testing.assertion_methods (https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/testing.md#dt10005)
 ```
 
 > **Note:** The rule reports once the whole compilation has been seen, because only then is it known whether a helper asserts. It shows on build and in CI, and in the IDE only with full solution analysis on. It replaces Sonar's `S2699`, which the package turns off because it can't see an assertion made inside a helper.
@@ -224,7 +225,7 @@ nearest `global.json` in or above the test project's folder as text, looking for
 build/Digitals.Testing.targets(57,3): error DIGT001: Digitals.Testing requires the Microsoft.Testing.Platform runner, which is selected in global.json at the repository root. Add: "test": { "runner": "Microsoft.Testing.Platform" } (needs .NET SDK 10 or later). Without it no coverage is collected and the coverage gate never runs. Staging the migration? Set <DigitalsAllowVSTestRunner>true</DigitalsAllowVSTestRunner> with a comment explaining why.
 ```
 
-> **Note:** This is what `dotnet build` prints. `dotnet test` stops before the build, with Microsoft.Testing.Platform's own error: `Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK and later.`
+> **Note:** This is what `dotnet build` prints. `dotnet test` stops before the build, with Microsoft.Testing.Platform's own error: `Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK and later.` `DigitalsAllowVSTestRunner` doesn't change that: it lets `dotnet build` pass while the `global.json` change waits, and `dotnet test` keeps failing until it lands.
 
 ### `DIGT002`
 
@@ -340,7 +341,7 @@ No method scores above this CRAP (Change Risk Anti-Patterns) score. The floors a
 untested method with a dozen branches inside a repo at 85%. CRAP is judged per method:
 `complexity² × (1 − line coverage)³ + complexity`. A fully covered method scores its complexity; the same method with
 no tests scores complexity² plus complexity, so covering it brings the score down fast. The default is 30. Here
-`StudioRates.Surcharge` adds weekend and out-of-hours rates with three `if` statements, and nothing tests it.
+`StudioRates.Surcharge` adds weekend and out-of-hours rates with three `if` statements on compound conditions, and nothing tests it.
 
 ```diff
 + [Trait("Category", "Unit")]
@@ -486,7 +487,7 @@ Set these in the test project. The package reads them after the project file, so
 | `DigitalsCoverageSettingsFile` | The packaged [Digitals.Testing.coverage.xml](../../src/Digitals.Testing/build/config/Digitals.Testing.coverage.xml) | The coverage engine's settings: what counts as coverable. A repo's own file replaces the packaged one, so start from a copy. |
 | `DigitalsTrxReport` | `true` | Writes a TRX file to `TestResults/` for CI to publish. |
 
-The packaged settings leave out test assemblies, auto-property bodies, code marked `[ExcludeFromCodeCoverage]`,
+The packaged settings leave out assemblies whose name ends in `Tests`, auto-property bodies, code marked `[ExcludeFromCodeCoverage]`,
 generated code, `[Obsolete]` code and EF Core migrations. Mark code that genuinely can't be tested with
 `[ExcludeFromCodeCoverage(Justification = "...")]`; it then leaves the denominator.
 
@@ -537,10 +538,11 @@ The build checks and the coverage gate are MSBuild properties, set in the test p
 <!-- Moq stays until the payment client tests move to NSubstitute (TICKET-1240). -->
 <DigitalsAllowBannedPackages>Moq</DigitalsAllowBannedPackages>
 
-<!-- The release pipeline still runs these through VSTest; remove when it moves to dotnet test (TICKET-1241). -->
+<!-- global.json moves to the MTP runner with the SDK upgrade (TICKET-1241); remove then. -->
 <DigitalsAllowVSTestRunner>true</DigitalsAllowVSTestRunner>
 ```
 
 `DigitalsAllowBannedPackages` takes several packages separated by semicolons. `DigitalsAllowVSTestRunner` only stages
-a migration: under VSTest no coverage is collected, so the gate does nothing. The coverage properties are in
+a migration: it lets `dotnet build` pass, but `dotnet test` still fails until `global.json` selects the runner, and no
+coverage is collected meanwhile. The coverage properties are in
 [Coverage settings](#coverage-settings).

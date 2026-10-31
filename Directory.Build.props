@@ -1,7 +1,7 @@
 <Project>
 
 	<!--
-		Solution-wide compiler and analyzer baseline, same as csharp-api-template, with two differences
+		Solution-wide compiler and analyzer baseline, same as the Digitals .NET service template, with two differences
 		because this repo builds the analyzers instead of only consuming them:
 		- No TargetFramework. The analyzers and the coverage gate are netstandard2.0 (they run inside
 		  the compiler and the test host), Digitals.Testing and the tests are net10.0, so
@@ -19,7 +19,7 @@
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-		<!-- Pin the ruleset, not the SDK (csharp/pin-analyzer-ruleset) -->
+		<!-- Pin the ruleset, not the SDK: a new SDK must not change which rules run. -->
 		<AnalysisLevel>10.0</AnalysisLevel>
 		<AnalysisMode>Recommended</AnalysisMode>
 

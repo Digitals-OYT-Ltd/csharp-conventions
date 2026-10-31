@@ -11,6 +11,7 @@ using Xunit;
 
 namespace Digitals.Testing.Coverage.Tests;
 
+[Trait("Category", "Integration")]
 public sealed class CoverageGateTests : IDisposable
 {
     private readonly string _directory = Directory.CreateTempSubdirectory("digitals-gate").FullName;

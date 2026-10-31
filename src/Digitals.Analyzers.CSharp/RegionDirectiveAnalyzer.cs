@@ -21,7 +21,8 @@ public sealed class RegionDirectiveAnalyzer : DiagnosticAnalyzer
         messageFormat: "Delete the #region — extract a type or a method instead of folding the code away",
         category: "Digitals.Style",
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/Digitals-OYT-Ltd/csharp-conventions/blob/main/docs/rules/analyzers.md#dt00009");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
