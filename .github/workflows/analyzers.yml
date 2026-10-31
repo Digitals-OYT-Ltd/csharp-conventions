@@ -77,7 +77,7 @@ jobs:
         run: ./scripts/pack.ps1 -Package Analyzers
 
       - name: 📤 Upload Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: analyzers-nupkg
           path: artifacts/*.nupkg
