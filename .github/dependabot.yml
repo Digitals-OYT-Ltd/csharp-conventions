@@ -15,6 +15,10 @@ updates:
       # The floor on every consumer's compiler, never a version to keep current (AGENTS.md).
       - dependency-name: Microsoft.CodeAnalysis.CSharp
       - dependency-name: Microsoft.CodeAnalysis.CSharp.Workspaces
+      # Pinned to the platform xunit.v3 resolves, never above it: 2.5.2 over xunit.v3 4.0.2 fails the
+      # coverage tests with CS1705. Move both by hand when xunit.v3 moves (src/Digitals.Testing/AGENTS.md).
+      - dependency-name: Microsoft.Testing.Platform
+      - dependency-name: Microsoft.Testing.Extensions.TrxReport
     groups:
       # xunit.v3 and the Microsoft.Testing extensions have to resolve one Microsoft.Testing.Platform.
       test-stack:
